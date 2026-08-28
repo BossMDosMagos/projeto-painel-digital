@@ -9,8 +9,9 @@ const GPS_CONFIG = {
   enableHighAccuracy: true,
   maximumAge: 500,
   timeout: 10000,
-  minAccuracy: 20,     // ignora leituras acima disso para acumular km
-  minDeltaSec: 1.0     // intervalo mínimo entre leituras usadas
+  minAccuracy: 20,        // ignora leituras acima disso para acumular km
+  minDeltaSec: 1.0,       // intervalo mínimo entre leituras usadas
+  minSpeedThreshold: 1.5  // trava anti-drift: abaixo disso não soma km e agulha vai a zero (km/h)
 };
 
 const GAUGE_CONFIG = {
@@ -185,14 +186,19 @@ function handleGPSPosition(pos) {
     if (accuracy <= GPS_CONFIG.minAccuracy && timeDeltaSec > 0) {
       state.gpsActive = true;
 
-      if (typeof speed === 'number' && speed >= 0) {
-        state.targetSpeed = speed * 3.6;
-      } else {
-        state.targetSpeed = (distanceKm / (timeDeltaSec / 3600));
-      }
+      const speedKmh = (typeof speed === 'number' && speed >= 0)
+        ? speed * 3.6
+        : (distanceKm / (timeDeltaSec / 3600));
 
-      if (distanceKm > 0.00001) {
-        updateOdometerFromGPS(distanceKm, accuracy);
+      if (speedKmh <= GPS_CONFIG.minSpeedThreshold) {
+        // Drift/parado: agulha a zero e odômetro pausado
+        state.targetSpeed = 0;
+      } else {
+        state.targetSpeed = speedKmh;
+
+        if (distanceKm > 0.00001) {
+          updateOdometerFromGPS(distanceKm, accuracy);
+        }
       }
     }
   }
