@@ -29,6 +29,17 @@ let state = {
   needleVelocity: 0,
   odoTotal: parseFloat(localStorage.getItem('odoTotal')) || 59281.0,
   odoTrip: parseFloat(localStorage.getItem('odoTrip')) || 0.0,
+  oilIntervalKm: parseFloat(localStorage.getItem('oilIntervalKm')) || 5000,
+  oilLastKm: (() => {
+    const v = parseFloat(localStorage.getItem('oilLastKm'));
+    if (!isNaN(v) && v >= 0) return v;
+    const cur = parseFloat(localStorage.getItem('odoTotal')) || 59281.0;
+    localStorage.setItem('oilLastKm', cur.toFixed(3));
+    return cur;
+  })(),
+  oilWarnAt500: localStorage.getItem('oilWarnAt500') === '1',
+  oilWarnOverdue: localStorage.getItem('oilWarnOverdue') === '1',
+  oilPhase: false,
   isAccelerating: false,
   isBraking: false,
   nightMode: false,
@@ -54,6 +65,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initColorPickers();
   initPressAndHoldOptions(); // DETECTA DEDO SEGURADO FORA DO PAINEL
   initConfigModalLogic();     // CONTROLES INTERNOS DO MODAL
+  initOilControl();           // CONTROLE DE TROCA DE ÓLEO NO LCD
   initClock();
   initGPS();
   requestWakeLock();
@@ -274,11 +286,16 @@ function initPressAndHoldOptions() {
 function openConfigModal() {
   const configModal = document.getElementById('config-modal');
   const inputOdo = document.getElementById('cfg-total-odo');
+  const inputOil = document.getElementById('cfg-oil-interval');
 
   if (configModal && !configModal.open) {
     if (inputOdo) {
       inputOdo.value = state.odoTotal.toFixed(1);
     }
+    if (inputOil) {
+      inputOil.value = state.oilIntervalKm;
+    }
+    updateOilSummaryInModal();
     configModal.showModal();
   }
 }
@@ -337,6 +354,84 @@ function initConfigModalLogic() {
       showToast(state.nightMode ? 'Modo noturno ativado' : 'Modo diurno ativado');
     });
   }
+}
+
+/* CONTROLE DE TROCA DE ÓLEO — quando faltam <=500 km o relógio alterna (5s)
+   entre o horário e o aviso "chave inglesa + ÓLEO" no próprio LCD. */
+function initOilControl() {
+  const updateOilUI = () => {
+    const remaining = state.oilIntervalKm - (state.odoTotal - state.oilLastKm);
+    const alert = remaining <= 500;
+
+    if (alert && remaining > 0 && !state.oilWarnAt500) {
+      state.oilWarnAt500 = true;
+      localStorage.setItem('oilWarnAt500', '1');
+      showToast('Faltam 500 km para a troca de óleo');
+    } else if (alert && remaining <= 0 && !state.oilWarnOverdue) {
+      state.oilWarnOverdue = true;
+      localStorage.setItem('oilWarnOverdue', '1');
+      showToast('Troca de óleo VENCIDA!', 'error');
+    }
+
+    const clockWrap = document.getElementById('clock-wrap');
+    if (!clockWrap) return;
+    if (alert) {
+      state.oilPhase = !state.oilPhase;
+      clockWrap.classList.toggle('oil-alert', state.oilPhase);
+    } else {
+      clockWrap.classList.remove('oil-alert');
+    }
+  };
+
+  const btnSaveOil = document.getElementById('btn-save-oil');
+  const inputOil = document.getElementById('cfg-oil-interval');
+  if (btnSaveOil && inputOil) {
+    btnSaveOil.addEventListener('click', () => {
+      const val = parseFloat(inputOil.value.replace(',', '.'));
+      if (!isNaN(val) && val > 0) {
+        state.oilIntervalKm = Math.round(val);
+        localStorage.setItem('oilIntervalKm', String(Math.round(val)));
+        showToast('Intervalo de óleo: ' + Math.round(val) + ' km');
+        updateOilSummaryInModal();
+      } else {
+        showToast('Valor inválido!', 'error');
+      }
+    });
+  }
+
+  const btnOilChange = document.getElementById('btn-oil-change');
+  if (btnOilChange) {
+    btnOilChange.addEventListener('click', registerOilChange);
+  }
+
+  const clockWrap = document.getElementById('clock-wrap');
+  if (clockWrap) clockWrap.addEventListener('click', () => openConfigModal());
+
+  updateOilUI();
+  setInterval(updateOilUI, 5000);
+}
+
+function registerOilChange() {
+  state.oilLastKm = state.odoTotal;
+  state.oilWarnAt500 = false;
+  state.oilWarnOverdue = false;
+  state.oilPhase = false;
+  localStorage.setItem('oilLastKm', state.oilLastKm.toFixed(3));
+  localStorage.removeItem('oilWarnAt500');
+  localStorage.removeItem('oilWarnOverdue');
+  const clockWrap = document.getElementById('clock-wrap');
+  if (clockWrap) clockWrap.classList.remove('oil-alert');
+  updateOilSummaryInModal();
+  showToast('Troca de óleo registrada em ' + state.oilLastKm.toFixed(1) + ' km');
+}
+
+function updateOilSummaryInModal() {
+  const el = document.getElementById('oil-summary');
+  if (!el) return;
+  const elapsed = state.odoTotal - state.oilLastKm;
+  const remaining = state.oilIntervalKm - elapsed;
+  el.textContent = 'Rodados desde a troca: ' + Math.max(0, Math.round(elapsed)) +
+    ' km · Faltam: ' + Math.round(remaining) + ' km';
 }
 
 function drawGaugeFace() {
