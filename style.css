@@ -90,6 +90,8 @@ body {
 /* Dígitos de horas e minutos */
 .digit {
   font-size: var(--digit);
+  font-weight: 900;
+  -webkit-text-stroke: 0.8px #000000;
   width: 0.58em;
   text-align: center;
   display: inline-block;
@@ -98,6 +100,8 @@ body {
 /* Separador horas:minutos */
 .colon {
   font-size: var(--digit);
+  font-weight: 900;
+  -webkit-text-stroke: 0.8px #000000;
   width: 0.26em;
   text-align: center;
   display: inline-block;
@@ -106,6 +110,8 @@ body {
 /* Separador minutos:segundos (menor) */
 .colon-sec {
   font-size: calc(var(--digit) * 0.64);
+  font-weight: 900;
+  -webkit-text-stroke: 0.5px #000000;
   width: 0.26em;
   text-align: center;
   display: inline-block;
@@ -114,6 +120,8 @@ body {
 /* Dígitos dos segundos (menores) */
 .digit-sec {
   font-size: calc(var(--digit) * 0.55);
+  font-weight: 900;
+  -webkit-text-stroke: 0.5px #000000;
   width: 0.58em;
   text-align: center;
   display: inline-block;
