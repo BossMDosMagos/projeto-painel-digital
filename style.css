@@ -36,21 +36,21 @@ body {
   padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
 }
 
-/* RELÓGIO LCD 24H (DS-Digital, escala proporcional ao mostrador) */
+/* RELÓGIO LCD 24H (DS-Digital, dentro do mostrador) */
 .clock-container {
-  position: fixed;
-  bottom: calc(8px + env(safe-area-inset-bottom));
+  position: absolute;
   left: 50%;
-  transform: translateX(-50%);
-  z-index: 30;
-  --digit: clamp(20px, 6vmin, 44px);
+  top: 80%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  --digit: clamp(20px, 7vmin, 42px);
   background: linear-gradient(135deg, #2c302e, #131416);
-  padding: clamp(7px, 2vmin, 13px);
-  border-radius: clamp(8px, 2vmin, 13px);
+  padding: clamp(6px, 1.6vmin, 10px);
+  border-radius: clamp(7px, 1.8vmin, 11px);
   box-shadow:
     inset 0 3px 4px rgba(255, 255, 255, 0.12),
     inset 0 -3px 4px rgba(0, 0, 0, 0.7),
-    0 10px 22px rgba(0, 0, 0, 0.55);
+    0 8px 18px rgba(0, 0, 0, 0.5);
   user-select: none;
   pointer-events: none;
 }
@@ -309,6 +309,7 @@ body.night-mode .clock-container {
 }
 
 .gauge-container {
+  position: relative;
   width: 90vw;
   max-width: 550px;
   height: auto;

@@ -62,22 +62,6 @@
     </div>
   </dialog>
 
-  <!-- RELÓGIO LCD 24H -->
-  <div class="clock-container" id="clock-wrap" aria-label="Relógio">
-    <div class="clock-display">
-      <div class="time-wrapper">
-        <span class="digit" id="h1">0</span>
-        <span class="digit" id="h2">0</span>
-        <span class="colon">:</span>
-        <span class="digit" id="m1">0</span>
-        <span class="digit" id="m2">0</span>
-        <span class="colon-sec">:</span>
-        <span class="digit-sec" id="s1">0</span>
-        <span class="digit-sec" id="s2">0</span>
-      </div>
-    </div>
-  </div>
-
   <!-- TOAST (feedback não-bloqueante) -->
   <div class="toast-container" id="toast-container" aria-live="polite"></div>
 
@@ -200,8 +184,21 @@
         <line x1="240" y1="207" x2="240" y2="213" stroke="#868e96" stroke-width="1.2"/>
       </g>
 
-      <!-- SÉRIE -->
-      <text x="200" y="328" class="serial-text">0088</text>
+      <!-- RELÓGIO LCD 24H (dentro do mostrador) -->
+      <div class="clock-container" id="clock-wrap" aria-label="Relógio">
+        <div class="clock-display">
+          <div class="time-wrapper">
+            <span class="digit" id="h1">0</span>
+            <span class="digit" id="h2">0</span>
+            <span class="colon">:</span>
+            <span class="digit" id="m1">0</span>
+            <span class="digit" id="m2">0</span>
+            <span class="colon-sec">:</span>
+            <span class="digit-sec" id="s1">0</span>
+            <span class="digit-sec" id="s2">0</span>
+          </div>
+        </div>
+      </div>
 
       <!-- PONTEIRO EIXADO EM (200, 200) -->
       <g id="needle-group" style="transform-origin: 200px 200px;">

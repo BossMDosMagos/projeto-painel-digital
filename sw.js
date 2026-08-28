@@ -1,4 +1,4 @@
-const CACHE_NAME = 'speedometer-v3';
+const CACHE_NAME = 'speedometer-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -27,14 +27,36 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  if (e.request.method !== 'GET') return;
-  e.respondWith(
-    caches.match(e.request).then((cached) => {
-      const network = fetch(e.request)
+  const request = e.request;
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+  const isSameOrigin = url.origin === self.location.origin;
+
+  // Navegação: rede-primeiro (garante que o HTML sempre chegue atualizado, cache só se offline)
+  if (request.mode === 'navigate') {
+    e.respondWith(
+      fetch(request)
         .then((response) => {
-          if (response.ok && new URL(e.request.url).origin === self.location.origin) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          return response;
+        })
+        .catch(() =>
+          caches.match(request).then((cached) => cached || caches.match('./index.html'))
+        )
+    );
+    return;
+  }
+
+  // Demais recursos: cache-primeiro com atualização em segundo plano
+  e.respondWith(
+    caches.match(request).then((cached) => {
+      const network = fetch(request)
+        .then((response) => {
+          if (response.ok && isSameOrigin) {
             const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }
           return response;
         })
