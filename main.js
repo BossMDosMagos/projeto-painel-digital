@@ -287,6 +287,7 @@ function openConfigModal() {
   const configModal = document.getElementById('config-modal');
   const inputOdo = document.getElementById('cfg-total-odo');
   const inputOil = document.getElementById('cfg-oil-interval');
+  const inputOilLast = document.getElementById('cfg-oil-last');
 
   if (configModal && !configModal.open) {
     if (inputOdo) {
@@ -294,6 +295,9 @@ function openConfigModal() {
     }
     if (inputOil) {
       inputOil.value = state.oilIntervalKm;
+    }
+    if (inputOilLast) {
+      inputOilLast.value = state.oilLastKm.toFixed(1);
     }
     updateOilSummaryInModal();
     configModal.showModal();
@@ -402,6 +406,28 @@ function initOilControl() {
   const btnOilChange = document.getElementById('btn-oil-change');
   if (btnOilChange) {
     btnOilChange.addEventListener('click', registerOilChange);
+  }
+
+  const btnSaveOilLast = document.getElementById('btn-save-oil-last');
+  const inputOilLast = document.getElementById('cfg-oil-last');
+  if (btnSaveOilLast && inputOilLast) {
+    btnSaveOilLast.addEventListener('click', () => {
+      const val = parseFloat(inputOilLast.value.replace(',', '.'));
+      if (!isNaN(val) && val >= 0) {
+        state.oilLastKm = val;
+        state.oilWarnAt500 = false;
+        state.oilWarnOverdue = false;
+        localStorage.setItem('oilLastKm', val.toFixed(3));
+        localStorage.removeItem('oilWarnAt500');
+        localStorage.removeItem('oilWarnOverdue');
+        const clockWrap = document.getElementById('clock-wrap');
+        if (clockWrap) clockWrap.classList.remove('oil-alert');
+        updateOilSummaryInModal();
+        showToast('Última troca definida em ' + val.toFixed(1) + ' km');
+      } else {
+        showToast('Valor inválido!', 'error');
+      }
+    });
   }
 
   const clockWrap = document.getElementById('clock-wrap');
