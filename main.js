@@ -76,7 +76,7 @@ function playOilBeep() {
     osc.type = 'square';
     osc.frequency.value = freq;
     gain.gain.setValueAtTime(0.0001, now + delay);
-    gain.gain.exponentialRampToValueAtTime(0.1, now + delay + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.45, now + delay + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.15);
     osc.connect(gain);
     gain.connect(ctx.destination);
