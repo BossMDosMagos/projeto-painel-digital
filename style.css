@@ -45,9 +45,8 @@ body {
   transform: translate(-50%, -50%);
   z-index: 5;
   --digit: clamp(20px, 6vw, 37px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   background: linear-gradient(180deg, #88b04b 0%, #719c3b 100%);
   padding: calc(var(--digit) * 0.1) calc(var(--digit) * 0.18);
   border-radius: clamp(4px, 1.1vw, 6px);
@@ -82,8 +81,10 @@ body {
   white-space: nowrap;
   color: #000000;
   text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.15);
+  grid-area: 1 / 1;
+  justify-self: center;
+  align-self: center;
   z-index: 2;
-  width: 100%;
   font-family: 'DS-Digital', monospace;
 }
 
@@ -127,21 +128,28 @@ body {
   display: inline-block;
 }
 
-/* Alerta de troca de óleo: alterna com o horário (5 em 5s) quando faltam <=500 km */
+/* Alerta de troca de óleo: alterna com o horário (5 em 5s) quando faltam <=500 km.
+   Horário e aviso ficam na mesma célula do grid: o box verde mantém o tamanho do
+   conteúdo maior (o horário) — só a visibilidade alterna. */
 .oil-message {
-  display: none;
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   color: #000000;
+  grid-area: 1 / 1;
+  justify-self: center;
+  align-self: center;
+  visibility: hidden;
+  z-index: 3;
 }
 
 .clock-display.oil-alert .time-wrapper {
-  display: none;
+  visibility: hidden;
 }
 
 .clock-display.oil-alert .oil-message {
-  display: flex;
+  visibility: visible;
 }
 
 .oil-message .oil-wrench {
