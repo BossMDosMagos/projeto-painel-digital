@@ -184,20 +184,6 @@
         <line x1="240" y1="207" x2="240" y2="213" stroke="#868e96" stroke-width="1.2"/>
       </g>
 
-      <!-- RELÓGIO LCD 24H (embutido na chapa branca, abaixo de km/h) -->
-      <div class="clock-display" id="clock-wrap" aria-label="Relógio">
-        <div class="time-wrapper">
-          <span class="digit" id="h1">0</span>
-          <span class="digit" id="h2">0</span>
-          <span class="colon">:</span>
-          <span class="digit" id="m1">0</span>
-          <span class="digit" id="m2">0</span>
-          <span class="colon-sec">:</span>
-          <span class="digit-sec" id="s1">0</span>
-          <span class="digit-sec" id="s2">0</span>
-        </div>
-      </div>
-
       <!-- PONTEIRO EIXADO EM (200, 200) -->
       <g id="needle-group" style="transform-origin: 200px 200px;">
         <line x1="200" y1="200" x2="60" y2="200" stroke="rgba(0,0,0,0.3)" stroke-width="5" stroke-linecap="round" transform="translate(2, 5)"/>
@@ -209,6 +195,20 @@
         <circle cx="200" cy="200" r="11" fill="#181a1d"/>
       </g>
     </svg>
+
+    <!-- RELÓGIO LCD 24H (embutido na chapa branca, abaixo de km/h) -->
+    <div class="clock-display" id="clock-wrap" aria-label="Relógio">
+      <div class="time-wrapper">
+        <span class="digit" id="h1">0</span>
+        <span class="digit" id="h2">0</span>
+        <span class="colon">:</span>
+        <span class="digit" id="m1">0</span>
+        <span class="digit" id="m2">0</span>
+        <span class="colon-sec">:</span>
+        <span class="digit-sec" id="s1">0</span>
+        <span class="digit-sec" id="s2">0</span>
+      </div>
+    </div>
   </div>
 
   <script src="main.js"></script>
