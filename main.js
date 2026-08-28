@@ -55,6 +55,35 @@ let state = {
 
 let lastGPSFix = null;
 let wakeLock = null;
+let oilAudioCtx = null;
+const OIL_BEEP_STOP_KPH = 1.5; // velocidade GPS <= isso = veículo parado (bip do óleo)
+
+function ensureOilAudio() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  if (!oilAudioCtx) oilAudioCtx = new AC();
+  if (oilAudioCtx.state === 'suspended') oilAudioCtx.resume();
+  return oilAudioCtx;
+}
+
+function playOilBeep() {
+  const ctx = ensureOilAudio();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  [[0, 1100], [0.22, 880]].forEach(([delay, freq]) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, now + delay);
+    gain.gain.exponentialRampToValueAtTime(0.1, now + delay + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.15);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now + delay);
+    osc.stop(now + delay + 0.16);
+  });
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   applyNightColors();
@@ -382,6 +411,10 @@ function initOilControl() {
     if (alert) {
       state.oilPhase = !state.oilPhase;
       clockWrap.classList.toggle('oil-alert', state.oilPhase);
+      // Bip em sincronia com o aviso visual, apenas com o veículo PARADO (GPS)
+      if (state.oilPhase && state.gpsActive && state.targetSpeed <= OIL_BEEP_STOP_KPH) {
+        playOilBeep();
+      }
     } else {
       clockWrap.classList.remove('oil-alert');
     }
@@ -432,6 +465,11 @@ function initOilControl() {
 
   const clockWrap = document.getElementById('clock-wrap');
   if (clockWrap) clockWrap.addEventListener('click', () => openConfigModal());
+
+  // Desbloqueia o áudio no primeiro gesto (política de autoplay do mobile)
+  ['touchstart', 'click', 'keydown'].forEach((ev) => {
+    document.addEventListener(ev, ensureOilAudio, { passive: true });
+  });
 
   updateOilUI();
   setInterval(updateOilUI, 5000);
