@@ -40,6 +40,10 @@ let state = {
   oilWarnAt500: localStorage.getItem('oilWarnAt500') === '1',
   oilWarnOverdue: localStorage.getItem('oilWarnOverdue') === '1',
   oilPhase: false,
+  oilVolume: (() => {
+    const v = parseFloat(localStorage.getItem('oilVolume'));
+    return (!isNaN(v) && v >= 0 && v <= 100) ? v : 45;
+  })(),
   isAccelerating: false,
   isBraking: false,
   nightMode: false,
@@ -68,7 +72,8 @@ function ensureOilAudio() {
 
 function playOilBeep() {
   const ctx = ensureOilAudio();
-  if (!ctx) return;
+  if (!ctx || state.oilVolume <= 0) return;
+  const peak = state.oilVolume / 100;
   const now = ctx.currentTime;
   [[0, 1100], [0.22, 880]].forEach(([delay, freq]) => {
     const osc = ctx.createOscillator();
@@ -76,7 +81,7 @@ function playOilBeep() {
     osc.type = 'square';
     osc.frequency.value = freq;
     gain.gain.setValueAtTime(0.0001, now + delay);
-    gain.gain.exponentialRampToValueAtTime(0.45, now + delay + 0.02);
+    gain.gain.exponentialRampToValueAtTime(peak, now + delay + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.15);
     osc.connect(gain);
     gain.connect(ctx.destination);
@@ -317,6 +322,8 @@ function openConfigModal() {
   const inputOdo = document.getElementById('cfg-total-odo');
   const inputOil = document.getElementById('cfg-oil-interval');
   const inputOilLast = document.getElementById('cfg-oil-last');
+  const inputVolume = document.getElementById('cfg-volume');
+  const volumeLabel = document.getElementById('cfg-volume-label');
 
   if (configModal && !configModal.open) {
     if (inputOdo) {
@@ -327,6 +334,10 @@ function openConfigModal() {
     }
     if (inputOilLast) {
       inputOilLast.value = state.oilLastKm.toFixed(1);
+    }
+    if (inputVolume) {
+      inputVolume.value = state.oilVolume;
+      if (volumeLabel) volumeLabel.textContent = Math.round(state.oilVolume) + '%';
     }
     updateOilSummaryInModal();
     configModal.showModal();
@@ -453,7 +464,19 @@ function initOilControl() {
         localStorage.setItem('oilLastKm', val.toFixed(3));
         localStorage.removeItem('oilWarnAt500');
         localStorage.removeItem('oilWarnOverdue');
-        const clockWrap = document.getElementById('clock-wrap');
+const inputVolume = document.getElementById('cfg-volume');
+  const volumeLabel = document.getElementById('cfg-volume-label');
+  if (inputVolume) {
+    inputVolume.value = state.oilVolume;
+    if (volumeLabel) volumeLabel.textContent = Math.round(state.oilVolume) + '%';
+    inputVolume.addEventListener('input', (e) => {
+      state.oilVolume = parseFloat(e.target.value);
+      localStorage.setItem('oilVolume', String(state.oilVolume));
+      if (volumeLabel) volumeLabel.textContent = Math.round(state.oilVolume) + '%';
+    });
+  }
+
+  const clockWrap = document.getElementById('clock-wrap');
         if (clockWrap) clockWrap.classList.remove('oil-alert');
         updateOilSummaryInModal();
         showToast('Última troca definida em ' + val.toFixed(1) + ' km');
