@@ -39,7 +39,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initOdometerStrips();
   initControls();
   initColorPickers();
-  initCalibration();
+  initPressAndHoldOptions(); // DETECTA DEDO SEGURADO FORA DO PAINEL
+  initConfigModalLogic();     // CONTROLES INTERNOS DO MODAL
   runSelfTest();
   startPhysicsLoop();
 
@@ -64,7 +65,6 @@ function checkAutoNightMode() {
   }
 }
 
-// ATUALIZA O ESTADO VISUAL DO LED DE GPS
 function updateGPSStatus(accuracyInMeters) {
   const ledGroup = document.getElementById('gps-led-group');
   if (!ledGroup) return;
@@ -74,10 +74,8 @@ function updateGPSStatus(accuracyInMeters) {
   if (accuracyInMeters === null || isNaN(accuracyInMeters)) {
     ledGroup.classList.add('gps-led-off');
   } else if (accuracyInMeters <= 15) {
-    // Alta precisão (Verde Neon)
     ledGroup.classList.add('gps-led-high');
   } else {
-    // Precisão Média/Baixa (Amarelo)
     ledGroup.classList.add('gps-led-warn');
   }
 }
@@ -101,6 +99,97 @@ function initColorPickers() {
       state.nightColors.numbers = e.target.value;
       localStorage.setItem('nightNumberColor', e.target.value);
       applyNightColors();
+    });
+  }
+}
+
+/* LÓGICA DO GESTO DE SEGURAR O DEDO FORA DO PAINEL */
+function initPressAndHoldOptions() {
+  const gaugeCard = document.getElementById('gauge-card');
+  const configModal = document.getElementById('config-modal');
+  let holdTimer = null;
+
+  const startHold = (e) => {
+    // Só ativa se tocar FORA do painel e se o modal não estiver aberto
+    if (gaugeCard.contains(e.target) || configModal.contains(e.target)) return;
+
+    holdTimer = setTimeout(() => {
+      openConfigModal();
+    }, 800);
+  };
+
+  const cancelHold = () => {
+    if (holdTimer) {
+      clearTimeout(holdTimer);
+      holdTimer = null;
+    }
+  };
+
+  document.addEventListener('mousedown', startHold);
+  document.addEventListener('mouseup', cancelHold);
+  document.addEventListener('mouseleave', cancelHold);
+
+  document.addEventListener('touchstart', startHold, { passive: true });
+  document.addEventListener('touchend', cancelHold);
+  document.addEventListener('touchcancel', cancelHold);
+}
+
+/* CONTROLES E AÇÕES DENTRO DO MODAL DE CONFIGURAÇÃO */
+function openConfigModal() {
+  const configModal = document.getElementById('config-modal');
+  const inputOdo = document.getElementById('cfg-total-odo');
+
+  if (inputOdo) {
+    inputOdo.value = state.odoTotal.toFixed(1);
+  }
+
+  if (configModal) {
+    configModal.classList.remove('hidden');
+  }
+}
+
+function initConfigModalLogic() {
+  const configModal = document.getElementById('config-modal');
+  const btnClose = document.getElementById('btn-close-config');
+  const btnSaveOdo = document.getElementById('btn-save-odo');
+  const btnResetTrip = document.getElementById('btn-reset-trip');
+  const btnToggleNight = document.getElementById('btn-toggle-night');
+  const inputOdo = document.getElementById('cfg-total-odo');
+
+  if (btnClose) {
+    btnClose.addEventListener('click', () => {
+      configModal.classList.add('hidden');
+    });
+  }
+
+  if (btnSaveOdo) {
+    btnSaveOdo.addEventListener('click', () => {
+      const val = parseFloat(inputOdo.value.replace(',', '.'));
+      if (!isNaN(val) && val >= 0) {
+        state.odoTotal = val;
+        localStorage.setItem('odoTotal', state.odoTotal.toFixed(3));
+        updateOdometerDisplay();
+        alert("Odômetro atualizado!");
+      } else {
+        alert("Valor inválido!");
+      }
+    });
+  }
+
+  if (btnResetTrip) {
+    btnResetTrip.addEventListener('click', () => {
+      state.odoTrip = 0.0;
+      localStorage.setItem('odoTrip', '0.0');
+      updateOdometerDisplay();
+      alert("Trip zerado!");
+    });
+  }
+
+  if (btnToggleNight) {
+    btnToggleNight.addEventListener('click', () => {
+      state.manualNightOverride = true;
+      state.nightMode = !state.nightMode;
+      document.body.classList.toggle('night-mode', state.nightMode);
     });
   }
 }
@@ -202,51 +291,10 @@ function updateOdometerDisplay() {
   renderContinuousValue(state.odoTrip * 10, 'odo-trip', 4);
 }
 
-function initCalibration() {
-  const totalOdoBtn = document.getElementById('total-odo-btn');
-  if (!totalOdoBtn) return;
-
-  let holdTimer = null;
-
-  const startHold = () => {
-    holdTimer = setTimeout(() => {
-      const inputVal = prompt("Calibração do Odômetro Real (km):", state.odoTotal.toFixed(1));
-      if (inputVal !== null) {
-        const parsedVal = parseFloat(inputVal.replace(',', '.'));
-        if (!isNaN(parsedVal) && parsedVal >= 0) {
-          state.odoTotal = parsedVal;
-          localStorage.setItem('odoTotal', state.odoTotal.toFixed(3));
-          updateOdometerDisplay();
-        } else {
-          alert("Valor de quilometragem inválido!");
-        }
-      }
-    }, 1000);
-  };
-
-  const cancelHold = () => {
-    if (holdTimer) {
-      clearTimeout(holdTimer);
-      holdTimer = null;
-    }
-  };
-
-  totalOdoBtn.addEventListener('mousedown', startHold);
-  totalOdoBtn.addEventListener('mouseup', cancelHold);
-  totalOdoBtn.addEventListener('mouseleave', cancelHold);
-
-  totalOdoBtn.addEventListener('touchstart', (e) => {
-    startHold();
-  }, { passive: true });
-  totalOdoBtn.addEventListener('touchend', cancelHold);
-  totalOdoBtn.addEventListener('touchcancel', cancelHold);
-}
-
 function runSelfTest() {
   state.isSelfTesting = true;
   state.targetSpeed = MAX_SPEED;
   
-  // Simula detecção de GPS durante o autoteste
   updateGPSStatus(10);
 
   setTimeout(() => {
@@ -331,6 +379,13 @@ function initControls() {
       state.odoTrip = 0.0;
       localStorage.setItem('odoTrip', '0.0');
       updateOdometerDisplay();
+    });
+  }
+
+  const totalOdoBtn = document.getElementById('total-odo-btn');
+  if (totalOdoBtn) {
+    totalOdoBtn.addEventListener('click', () => {
+      openConfigModal();
     });
   }
 }

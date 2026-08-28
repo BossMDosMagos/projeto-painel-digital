@@ -22,35 +22,135 @@ body {
   user-select: none;
   font-family: sans-serif;
   transition: background-color 0.3s ease;
+  touch-action: manipulation;
 }
 
-.night-color-picker {
-  position: absolute;
-  top: 15px;
+/* MODAL DE CONFIGURAÇÕES */
+.config-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
   display: flex;
-  gap: 15px;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 8px 16px;
-  border-radius: 20px;
-  color: #fff;
-  font-size: 14px;
-  backdrop-filter: blur(5px);
-  z-index: 10;
-}
-
-.night-color-picker label {
-  display: flex;
+  justify-content: center;
   align-items: center;
+  z-index: 100;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.config-modal.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.config-content {
+  background: #181a1d;
+  border: 1px solid #343a40;
+  border-radius: 12px;
+  padding: 24px;
+  width: 90%;
+  max-width: 380px;
+  color: #f8f9fa;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.config-content h2 {
+  font-family: 'Titillium Web', sans-serif;
+  font-size: 20px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #343a40;
+  padding-bottom: 8px;
+  text-align: center;
+}
+
+.config-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.config-group label {
+  font-size: 13px;
+  color: #adb5bd;
+}
+
+.input-inline {
+  display: flex;
   gap: 8px;
 }
 
-.night-color-picker input[type="color"] {
+.config-group input[type="number"] {
+  flex: 1;
+  background: #0d0e10;
+  border: 1px solid #343a40;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.color-pickers {
+  display: flex;
+  gap: 16px;
+}
+
+.color-pickers label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-size: 14px;
+}
+
+.color-pickers input[type="color"] {
   border: none;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   cursor: pointer;
   background: transparent;
+}
+
+.btn-action, .btn-danger, .btn-close {
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.btn-action {
+  background: #212529;
+  color: #fff;
+  border: 1px solid #495057;
+}
+
+.btn-action:active {
+  background: #343a40;
+}
+
+.btn-danger {
+  background: #c92a2a;
+  color: #fff;
+}
+
+.btn-danger:active {
+  background: #a81c1c;
+}
+
+.btn-close {
+  background: #f8f9fa;
+  color: #000;
+  margin-top: 8px;
 }
 
 .gauge-container {
@@ -102,19 +202,16 @@ body {
   transition: fill 0.3s ease, filter 0.3s ease;
 }
 
-/* Estado: Desconectado / Buscando */
 .gps-led-off .gps-dot {
   fill: #2b3035;
   filter: none;
 }
 
-/* Estado: Precisão Média (Sinal Amarelo) */
 .gps-led-warn .gps-dot {
   fill: #ffc107;
   filter: url(#led-glow);
 }
 
-/* Estado: Alta Precisão / Conectado (Sinal Verde Neon com Animação) */
 .gps-led-high .gps-dot {
   fill: #00ff66;
   filter: url(#led-glow);

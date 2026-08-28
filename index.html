@@ -21,16 +21,45 @@
 </head>
 <body>
 
-  <!-- CONTROLES NOTURNOS -->
-  <div class="night-color-picker">
-    <label>
-      Traços:
-      <input type="color" id="picker-ticks" value="#ff3333">
-    </label>
-    <label>
-      Números:
-      <input type="color" id="picker-numbers" value="#ff6666">
-    </label>
+  <!-- MODAL / PAINEL DE CONFIGURAÇÕES COMPLETO (Aparece ao segurar o dedo fora do painel) -->
+  <div class="config-modal hidden" id="config-modal">
+    <div class="config-content">
+      <h2>Configurações do Painel</h2>
+
+      <div class="config-group">
+        <label for="cfg-total-odo">Calibrar Odômetro Real (km):</label>
+        <div class="input-inline">
+          <input type="number" id="cfg-total-odo" step="0.1" min="0">
+          <button id="btn-save-odo" class="btn-action">Salvar</button>
+        </div>
+      </div>
+
+      <div class="config-group">
+        <label>Odômetro Parcial (Trip):</label>
+        <button id="btn-reset-trip" class="btn-danger">Zerar Trip</button>
+      </div>
+
+      <div class="config-group">
+        <label>Modo Noturno (Cores Customizadas):</label>
+        <div class="color-pickers">
+          <label>
+            Traços:
+            <input type="color" id="picker-ticks" value="#ff3333">
+          </label>
+          <label>
+            Números:
+            <input type="color" id="picker-numbers" value="#ff6666">
+          </label>
+        </div>
+      </div>
+
+      <div class="config-group">
+        <label>Alternar Modo Noturno:</label>
+        <button id="btn-toggle-night" class="btn-action">Alternar Dia/Noite</button>
+      </div>
+
+      <button id="btn-close-config" class="btn-close">Fechar</button>
+    </div>
   </div>
 
   <div class="gauge-container" id="gauge-card">
