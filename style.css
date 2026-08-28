@@ -37,19 +37,19 @@ body {
 }
 
 /* RELÓGIO LCD 24H — embutido na chapa branca do mostrador, logo abaixo de "km/h".
-   Escala em vw (5.4vw ≈ 24 unidades no viewBox 400) mantém o tamanho proporcional ao painel em qualquer tela. */
+   Escala em vw (6vw ≈ 30 unidades no viewBox 400) mantém o tamanho proporcional ao painel em qualquer tela. */
 .clock-display {
   position: absolute;
   left: 50%;
-  top: 80%;
+  top: 84.5%;
   transform: translate(-50%, -50%);
   z-index: 5;
-  --digit: clamp(18px, 5.4vw, 33px);
+  --digit: clamp(20px, 6vw, 37px);
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(180deg, #88b04b 0%, #719c3b 100%);
-  padding: calc(var(--digit) * 0.16) calc(var(--digit) * 0.1);
+  padding: calc(var(--digit) * 0.1) calc(var(--digit) * 0.24);
   border-radius: clamp(4px, 1.1vw, 6px);
   border: 1px solid rgba(0, 0, 0, 0.75);
   box-shadow:
@@ -89,7 +89,7 @@ body {
 /* Dígitos de horas e minutos */
 .digit {
   font-size: var(--digit);
-  width: 0.5em;
+  width: 0.6em;
   text-align: center;
   display: inline-block;
 }
@@ -97,7 +97,7 @@ body {
 /* Separador horas:minutos */
 .colon {
   font-size: var(--digit);
-  width: 0.25em;
+  width: 0.3em;
   text-align: center;
   display: inline-block;
 }
@@ -108,7 +108,7 @@ body {
   width: 0.26em;
   text-align: center;
   display: inline-block;
-  margin: 0 0.09em;
+  margin: 0 0.09em 0 0.45em;
 }
 
 /* Dígitos dos segundos (menores) */
