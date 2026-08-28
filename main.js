@@ -73,7 +73,8 @@ function ensureOilAudio() {
 function playOilBeep() {
   const ctx = ensureOilAudio();
   if (!ctx || state.oilVolume <= 0) return;
-  const peak = state.oilVolume / 100;
+  // Curva que deixa o máximo bem mais forte (100% => 1.2) e o padrão (45%) um pouco acima do anterior
+  const peak = 0.15 + (state.oilVolume / 100) * 1.05;
   const now = ctx.currentTime;
   [[0, 1100], [0.22, 880]].forEach(([delay, freq]) => {
     const osc = ctx.createOscillator();
@@ -466,14 +467,21 @@ function initOilControl() {
         localStorage.removeItem('oilWarnOverdue');
 const inputVolume = document.getElementById('cfg-volume');
   const volumeLabel = document.getElementById('cfg-volume-label');
+  const btnTestSound = document.getElementById('btn-test-sound');
   if (inputVolume) {
     inputVolume.value = state.oilVolume;
     if (volumeLabel) volumeLabel.textContent = Math.round(state.oilVolume) + '%';
-    inputVolume.addEventListener('input', (e) => {
+    const syncVolume = (e) => {
       state.oilVolume = parseFloat(e.target.value);
       localStorage.setItem('oilVolume', String(state.oilVolume));
       if (volumeLabel) volumeLabel.textContent = Math.round(state.oilVolume) + '%';
-    });
+    };
+    // Ouve 'input' E 'change': alguns webviews/browsers só disparam no soltar do dedo
+    inputVolume.addEventListener('input', syncVolume);
+    inputVolume.addEventListener('change', syncVolume);
+  }
+  if (btnTestSound) {
+    btnTestSound.addEventListener('click', playOilBeep);
   }
 
   const clockWrap = document.getElementById('clock-wrap');
