@@ -1,0 +1,191 @@
+:root {
+  --tick-color: #0d0e10;
+  --number-color: #0c0e10;
+  --night-tick-color: #ff3333;
+  --night-number-color: #ff6666;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #050505;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  overflow: hidden;
+  user-select: none;
+  font-family: sans-serif;
+  transition: background-color 0.3s ease;
+}
+
+.night-color-picker {
+  position: absolute;
+  top: 15px;
+  display: flex;
+  gap: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 16px;
+  border-radius: 20px;
+  color: #fff;
+  font-size: 14px;
+  backdrop-filter: blur(5px);
+  z-index: 10;
+}
+
+.night-color-picker label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.night-color-picker input[type="color"] {
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  background: transparent;
+}
+
+.gauge-container {
+  width: 90vw;
+  max-width: 550px;
+  height: auto;
+  aspect-ratio: 1 / 1;
+}
+
+.gauge-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.tick-major {
+  stroke: var(--tick-color);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  transition: stroke 0.3s;
+}
+
+.tick-minor {
+  stroke: var(--tick-color);
+  stroke-width: 2;
+  stroke-linecap: round;
+  transition: stroke 0.3s;
+}
+
+.gauge-number {
+  fill: var(--number-color);
+  font-family: 'Titillium Web', 'Arial Black', sans-serif;
+  font-style: italic;
+  font-weight: 900;
+  font-size: 21px;
+  transition: fill 0.3s;
+}
+
+/* LED DO GPS */
+.gps-label {
+  fill: #868e96;
+  font-family: 'Titillium Web', sans-serif;
+  font-size: 8px;
+  font-weight: 700;
+  text-anchor: middle;
+  letter-spacing: 1px;
+}
+
+.gps-dot {
+  transition: fill 0.3s ease, filter 0.3s ease;
+}
+
+/* Estado: Desconectado / Buscando */
+.gps-led-off .gps-dot {
+  fill: #2b3035;
+  filter: none;
+}
+
+/* Estado: Precisão Média (Sinal Amarelo) */
+.gps-led-warn .gps-dot {
+  fill: #ffc107;
+  filter: url(#led-glow);
+}
+
+/* Estado: Alta Precisão / Conectado (Sinal Verde Neon com Animação) */
+.gps-led-high .gps-dot {
+  fill: #00ff66;
+  filter: url(#led-glow);
+  animation: gps-pulse 2s infinite ease-in-out;
+}
+
+@keyframes gps-pulse {
+  0% { opacity: 0.7; }
+  50% { opacity: 1.0; }
+  100% { opacity: 0.7; }
+}
+
+.odo-strip, .odo-strip-dec {
+  transition: transform 0.05s linear;
+}
+
+.odo-digit-item {
+  fill: #ffffff;
+  font-family: 'Trebuchet MS', 'Arial', sans-serif;
+  font-size: 16px;
+  font-weight: 900;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.odo-digit-dec-item {
+  fill: #000000;
+  font-family: 'Trebuchet MS', 'Arial', sans-serif;
+  font-size: 16px;
+  font-weight: 900;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.unit-text {
+  fill: var(--number-color);
+  font-family: 'Titillium Web', sans-serif;
+  font-style: italic;
+  font-weight: 900;
+  font-size: 26px;
+  text-anchor: middle;
+  transition: fill 0.3s;
+}
+
+.serial-text {
+  fill: #868e96;
+  font-family: monospace;
+  font-size: 10px;
+  text-anchor: middle;
+  letter-spacing: 2px;
+}
+
+.needle-body {
+  stroke: #ff3b00;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.needle-core {
+  stroke: #ff7043;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* MODO NOTURNO */
+body.night-mode {
+  background-color: #020202;
+  --tick-color: var(--night-tick-color);
+  --number-color: var(--night-number-color);
+}
+
+body.night-mode #dial-face {
+  fill: #0a0c0e;
+}

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#D1D6D3" rx="64"/>
+  <rect x="64" y="64" width="384" height="384" fill="#1A1A2E" rx="32"/>
+  <text x="256" y="220" font-family="monospace" font-size="120" font-weight="900" fill="#0D0D0D" text-anchor="middle" font-variant-numeric="tabular-nums">88</text>
+  <text x="256" y="320" font-family="monospace" font-size="48" font-weight="700" fill="#3D3D3D" text-anchor="middle" letter-spacing="8">KM/H</text>
+  <rect x="100" y="380" width="140" height="40" fill="#C0392B" rx="8"/>
+  <text x="170" y="408" font-family="monospace" font-size="20" font-weight="700" fill="white" text-anchor="middle">RESET</text>
+  <rect x="272" y="380" width="140" height="40" fill="#27AE60" rx="8"/>
+  <text x="342" y="408" font-family="monospace" font-size="20" font-weight="700" fill="white" text-anchor="middle">AJUSTAR</text>
+</svg>
