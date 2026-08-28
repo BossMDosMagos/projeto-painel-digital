@@ -41,7 +41,7 @@ body {
 .clock-display {
   position: absolute;
   left: 50%;
-  top: 83%;
+  top: 81%;
   transform: translate(-50%, -50%);
   z-index: 5;
   --digit: clamp(20px, 6vw, 37px);
