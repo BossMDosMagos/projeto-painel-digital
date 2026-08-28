@@ -1,21 +1,33 @@
 {
-  "name": "Velocímetro Analógico",
+  "name": "Velocímetro GPS Moto",
   "short_name": "Velocímetro",
+  "description": "Painel de moto analógico com velocímetro GPS em tempo real, odômetros e relógio.",
+  "lang": "pt-BR",
   "start_url": "./index.html",
-  "display": "standalone",
-  "background_color": "#050505",
+  "scope": "./",
+  "display": "fullscreen",
+  "background_color": "#0d0e10",
   "theme_color": "#0d0e10",
   "orientation": "portrait",
+  "categories": ["navigation", "utilities", "travel"],
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3208/3208722.png",
+      "src": "icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3208/3208722.png",
+      "src": "icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

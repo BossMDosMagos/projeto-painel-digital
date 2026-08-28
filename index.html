@@ -2,8 +2,8 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Velocímetro Analógico - Edição Final</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <title>Velocímetro GPS Moto</title>
   
   <!-- CONFIGURAÇÕES PWA -->
   <link rel="manifest" href="manifest.json">
@@ -12,24 +12,24 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Velocímetro">
-  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3208/3208722.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
 
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@1,700;1,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@1,700;1,900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
 </head>
 <body>
 
-  <!-- MODAL / PAINEL DE CONFIGURAÇÕES COMPLETO (Aparece ao segurar o dedo fora do painel) -->
-  <div class="config-modal hidden" id="config-modal">
+  <!-- DIALOG / PAINEL DE CONFIGURAÇÕES COMPLETO (Aparece ao segurar o dedo fora do painel) -->
+  <dialog class="config-modal" id="config-modal">
     <div class="config-content">
       <h2>Configurações do Painel</h2>
 
       <div class="config-group">
         <label for="cfg-total-odo">Calibrar Odômetro Real (km):</label>
         <div class="input-inline">
-          <input type="number" id="cfg-total-odo" step="0.1" min="0">
+          <input type="number" id="cfg-total-odo" step="0.1" min="0" inputmode="decimal">
           <button id="btn-save-odo" class="btn-action">Salvar</button>
         </div>
       </div>
@@ -60,7 +60,13 @@
 
       <button id="btn-close-config" class="btn-close">Fechar</button>
     </div>
-  </div>
+  </dialog>
+
+  <!-- RELÓGIO LCD 24H -->
+  <div class="clock-overlay" id="clock-display" aria-label="Relógio">00:00:00</div>
+
+  <!-- TOAST (feedback não-bloqueante) -->
+  <div class="toast-container" id="toast-container" aria-live="polite"></div>
 
   <div class="gauge-container" id="gauge-card">
     <svg viewBox="0 0 400 400" class="gauge-svg">

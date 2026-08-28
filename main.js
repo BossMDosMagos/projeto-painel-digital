@@ -5,6 +5,14 @@ const SUNSET_CONFIG = {
   sunsetMinutes: 17 * 60 + 41   // 17:41
 };
 
+const GPS_CONFIG = {
+  enableHighAccuracy: true,
+  maximumAge: 500,
+  timeout: 10000,
+  minAccuracy: 20,     // ignora leituras acima disso para acumular km
+  minDeltaSec: 1.0     // intervalo mínimo entre leituras usadas
+};
+
 const GAUGE_CONFIG = {
   numCX: 195.3,
   numCY: 195.2,
@@ -25,12 +33,16 @@ let state = {
   nightMode: false,
   manualNightOverride: false,
   isSelfTesting: false,
+  gpsActive: false,
   gpsAccuracy: null,
   nightColors: {
     ticks: localStorage.getItem('nightTickColor') || '#ff3333',
     numbers: localStorage.getItem('nightNumberColor') || '#ff6666'
   }
 };
+
+let lastGPSFix = null;
+let wakeLock = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   applyNightColors();
@@ -41,10 +53,19 @@ document.addEventListener("DOMContentLoaded", () => {
   initColorPickers();
   initPressAndHoldOptions(); // DETECTA DEDO SEGURADO FORA DO PAINEL
   initConfigModalLogic();     // CONTROLES INTERNOS DO MODAL
-  runSelfTest();
+  initClock();
+  initGPS();
+  requestWakeLock();
+  if (!localStorage.getItem('selftest_done')) {
+    runSelfTest();
+    localStorage.setItem('selftest_done', '1');
+  }
   startPhysicsLoop();
 
   setInterval(checkAutoNightMode, 60000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') requestWakeLock();
+  });
 });
 
 function applyNightColors() {
@@ -80,6 +101,111 @@ function updateGPSStatus(accuracyInMeters) {
   }
 }
 
+/* TOAST — feedback não-bloqueante, seguro com luva */
+function showToast(message, type = 'success', duration = 2200) {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+
+  requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('toast-visible')));
+
+  setTimeout(() => {
+    toast.classList.remove('toast-visible');
+    setTimeout(() => toast.remove(), 350);
+  }, duration);
+}
+
+/* RELÓGIO LCD 24H */
+function initClock() {
+  const clockEl = document.getElementById('clock-display');
+  if (!clockEl) return;
+
+  const update = () => {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    clockEl.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  };
+
+  update();
+  setInterval(update, 1000);
+}
+
+/* WAKE LOCK — mantém a tela acesa no asfalto (requer HTTPS) */
+async function requestWakeLock() {
+  try {
+    if (!('wakeLock' in navigator)) return;
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch (err) {
+    console.warn('Wake Lock não disponível:', err.message);
+  }
+}
+
+/* GPS — watchPosition com Haversine para velocidade + distância */
+function initGPS() {
+  if (!('geolocation' in navigator)) {
+    updateGPSStatus(null);
+    showToast('GPS não suportado neste dispositivo', 'error', 3000);
+    return;
+  }
+
+  navigator.geolocation.watchPosition(
+    (pos) => handleGPSPosition(pos),
+    (err) => {
+      updateGPSStatus(null);
+      state.gpsActive = false;
+      console.warn('Erro GPS:', err.message);
+    },
+    GPS_CONFIG
+  );
+}
+
+function handleGPSPosition(pos) {
+  const { latitude, longitude, accuracy, speed } = pos.coords;
+  const timestamp = pos.timestamp;
+
+  updateGPSStatus(accuracy);
+
+  if (state.isSelfTesting) return;
+
+  const hasPrev = lastGPSFix && (timestamp - lastGPSFix.at) >= GPS_CONFIG.minDeltaSec * 1000;
+
+  if (hasPrev) {
+    const timeDeltaSec = (timestamp - lastGPSFix.at) / 1000;
+    const distanceKm = haversineKm(lastGPSFix.lat, lastGPSFix.lng, latitude, longitude);
+
+    if (accuracy <= GPS_CONFIG.minAccuracy && timeDeltaSec > 0) {
+      state.gpsActive = true;
+
+      if (typeof speed === 'number' && speed >= 0) {
+        state.targetSpeed = speed * 3.6;
+      } else {
+        state.targetSpeed = (distanceKm / (timeDeltaSec / 3600));
+      }
+
+      if (distanceKm > 0.00001) {
+        updateOdometerFromGPS(distanceKm, accuracy);
+      }
+    }
+  }
+
+  lastGPSFix = { lat: latitude, lng: longitude, at: timestamp };
+}
+
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
 function initColorPickers() {
   const pickerTicks = document.getElementById('picker-ticks');
   const pickerNumbers = document.getElementById('picker-numbers');
@@ -111,7 +237,7 @@ function initPressAndHoldOptions() {
 
   const startHold = (e) => {
     // Só ativa se tocar FORA do painel e se o modal não estiver aberto
-    if (gaugeCard.contains(e.target) || configModal.contains(e.target)) return;
+    if (gaugeCard.contains(e.target) || (configModal && configModal.open)) return;
 
     holdTimer = setTimeout(() => {
       openConfigModal();
@@ -134,18 +260,22 @@ function initPressAndHoldOptions() {
   document.addEventListener('touchcancel', cancelHold);
 }
 
-/* CONTROLES E AÇÕES DENTRO DO MODAL DE CONFIGURAÇÃO */
+/* CONTROLES E AÇÕES DENTRO DO DIALOG DE CONFIGURAÇÃO */
 function openConfigModal() {
   const configModal = document.getElementById('config-modal');
   const inputOdo = document.getElementById('cfg-total-odo');
 
-  if (inputOdo) {
-    inputOdo.value = state.odoTotal.toFixed(1);
+  if (configModal && !configModal.open) {
+    if (inputOdo) {
+      inputOdo.value = state.odoTotal.toFixed(1);
+    }
+    configModal.showModal();
   }
+}
 
-  if (configModal) {
-    configModal.classList.remove('hidden');
-  }
+function closeConfigModal() {
+  const configModal = document.getElementById('config-modal');
+  if (configModal && configModal.open) configModal.close();
 }
 
 function initConfigModalLogic() {
@@ -157,8 +287,12 @@ function initConfigModalLogic() {
   const inputOdo = document.getElementById('cfg-total-odo');
 
   if (btnClose) {
-    btnClose.addEventListener('click', () => {
-      configModal.classList.add('hidden');
+    btnClose.addEventListener('click', closeConfigModal);
+  }
+
+  if (configModal) {
+    configModal.addEventListener('click', (e) => {
+      if (e.target === configModal) closeConfigModal();
     });
   }
 
@@ -169,9 +303,9 @@ function initConfigModalLogic() {
         state.odoTotal = val;
         localStorage.setItem('odoTotal', state.odoTotal.toFixed(3));
         updateOdometerDisplay();
-        alert("Odômetro atualizado!");
+        showToast('Odômetro atualizado!');
       } else {
-        alert("Valor inválido!");
+        showToast('Valor inválido!', 'error');
       }
     });
   }
@@ -181,7 +315,7 @@ function initConfigModalLogic() {
       state.odoTrip = 0.0;
       localStorage.setItem('odoTrip', '0.0');
       updateOdometerDisplay();
-      alert("Trip zerado!");
+      showToast('Trip zerado!');
     });
   }
 
@@ -190,6 +324,7 @@ function initConfigModalLogic() {
       state.manualNightOverride = true;
       state.nightMode = !state.nightMode;
       document.body.classList.toggle('night-mode', state.nightMode);
+      showToast(state.nightMode ? 'Modo noturno ativado' : 'Modo diurno ativado');
     });
   }
 }
@@ -321,8 +456,11 @@ function updateOdometerFromGPS(distanceInKm, accuracyInMeters = 10) {
 
 function startPhysicsLoop() {
   let lastTime = performance.now();
+  let running = true;
 
   function loop(now) {
+    if (!running) return;
+
     const dt = Math.min((now - lastTime) / 1000, 0.1);
     lastTime = now;
 
@@ -330,7 +468,8 @@ function startPhysicsLoop() {
       state.targetSpeed = Math.min(MAX_SPEED, state.targetSpeed + 45 * dt);
     } else if (state.isBraking) {
       state.targetSpeed = Math.max(0, state.targetSpeed - 80 * dt);
-    } else if (state.targetSpeed > 0 && !state.isSelfTesting) {
+    } else if (state.targetSpeed > 0 && !state.isSelfTesting && !state.gpsActive) {
+      // Decay suave apenas quando NÃO há GPS ativo (evita "serrote" na agulha)
       state.targetSpeed = Math.max(0, state.targetSpeed - 12 * dt);
     }
 
@@ -355,6 +494,17 @@ function startPhysicsLoop() {
   }
 
   requestAnimationFrame(loop);
+
+  // Pausa o loop em background para economizar bateria
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      running = false;
+    } else {
+      running = true;
+      lastTime = performance.now();
+      requestAnimationFrame(loop);
+    }
+  });
 }
 
 function initControls() {
@@ -365,6 +515,7 @@ function initControls() {
       state.manualNightOverride = true;
       state.nightMode = !state.nightMode;
       document.body.classList.toggle('night-mode', state.nightMode);
+      showToast(state.nightMode ? 'Modo noturno ativado' : 'Modo diurno ativado');
     }
   });
 
@@ -379,6 +530,7 @@ function initControls() {
       state.odoTrip = 0.0;
       localStorage.setItem('odoTrip', '0.0');
       updateOdometerDisplay();
+      showToast('Trip zerado!');
     });
   }
 

@@ -18,33 +18,106 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
   user-select: none;
   font-family: sans-serif;
   transition: background-color 0.3s ease;
   touch-action: manipulation;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
 }
 
-/* MODAL DE CONFIGURAÇÕES */
-.config-modal {
+/* RELÓGIO LCD 24H */
+.clock-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(8px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 100;
-  opacity: 1;
-  transition: opacity 0.3s ease;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  font-size: clamp(18px, 5vw, 30px);
+  letter-spacing: 3px;
+  color: #0d0e10;
+  background: #e9ecef;
+  border-radius: 10px;
+  padding: 4px 18px;
+  opacity: 0.92;
+  border: 1px solid #adb5bd;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  user-select: none;
 }
 
-.config-modal.hidden {
-  opacity: 0;
+body.night-mode .clock-overlay {
+  background: #1c1e22;
+  color: var(--night-number-color);
+  border-color: #343a40;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+/* TOAST (feedback não-bloqueante) */
+.toast-container {
+  position: fixed;
+  top: calc(14px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
   pointer-events: none;
+}
+
+.toast {
+  background: #181a1d;
+  color: #f8f9fa;
+  border: 1px solid #343a40;
+  border-left: 4px solid #00ff66;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: 'Titillium Web', sans-serif;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  transform: translateY(-12px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  white-space: nowrap;
+}
+
+.toast.toast-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast.toast-error {
+  border-left-color: #ff3b00;
+}
+
+.toast.toast-warning {
+  border-left-color: #ffc107;
+}
+
+/* DIALOG / MODAL DE CONFIGURAÇÕES */
+.config-modal {
+  border: none;
+  background: transparent;
+  padding: 0;
+  width: auto;
+  max-width: none;
+  height: auto;
+  margin: auto;
+}
+
+.config-modal::backdrop {
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(8px);
+}
+
+.config-modal[open] {
+  display: flex;
 }
 
 .config-content {
@@ -52,8 +125,7 @@ body {
   border: 1px solid #343a40;
   border-radius: 12px;
   padding: 24px;
-  width: 90%;
-  max-width: 380px;
+  width: min(90vw, 380px);
   color: #f8f9fa;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   display: flex;
@@ -88,12 +160,13 @@ body {
 
 .config-group input[type="number"] {
   flex: 1;
+  min-height: 46px;
   background: #0d0e10;
   border: 1px solid #343a40;
   color: #fff;
   padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 14px;
+  border-radius: 8px;
+  font-size: 16px;
 }
 
 .color-pickers {
@@ -111,21 +184,25 @@ body {
 
 .color-pickers input[type="color"] {
   border: none;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   cursor: pointer;
   background: transparent;
+  padding: 0;
 }
 
 .btn-action, .btn-danger, .btn-close {
-  padding: 10px;
+  padding: 12px 10px;
+  min-height: 46px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-weight: bold;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
   transition: background 0.2s;
+  font-family: 'Titillium Web', sans-serif;
+  touch-action: manipulation;
 }
 
 .btn-action {

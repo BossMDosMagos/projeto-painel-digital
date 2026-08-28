@@ -1,103 +1,79 @@
-# Painel Digital GPS para Moto
+# Velocímetro GPS Moto (Analógico)
 
-Aplicação web PWA ultraleve que transforma o smartphone em painel digital de moto estilo LCD segmentado.
+PWA ultraleve que transforma o smartphone em um **painel de moto analógico** com velocímetro de agulha, odômetro total e parcial, relógio 24h e GPS em tempo real.
 
 ## 🎯 Características
 
-- **Velocímetro GPS** - Velocidade em tempo real via Geolocation API (km/h)
-- **Hodômetros** - TRIP A (parcial, com reset) + ODO Total (com calibração inicial)
-- **Relógio 24h** - Sincronizado em tempo real
-- **Indicadores** - Status GPS (conectado/buscando/sem sinal) + Bateria do dispositivo
-- **Estética LCD** - Fundo cinza #D1D6D3, dígitos pretos #0D0D0D, fonte segmentada Orbitron
-- **Mobile-First** - Responsivo fluido com CSS clamp(), pronto para split-screen
-- **Wake Lock** - Mantém tela acesa durante pilotagem
-- **Persistência** - localStorage auto-save (sobrevive a reload/fechamento)
-- **PWA** - Instalável, funciona offline via Service Worker
+- **Velocímetro analógico** — mostrador SVG 0–200 km/h com agulha de movimento suave (física de mola)
+- **GPS em tempo real** — velocidade via `watchPosition` + `Haversine`, com LED de precisão (verde/amarelo/apagado)
+- **Odômetros** — ODO Total (com calibração) + TRIP parcial (reset com um toque)
+- **Relógio 24h** — estilo LCD, sincronizado em tempo real
+- **Modo Noturno** — automático baseado em horário ou manual, com cores de traços/números customizáveis
+- **Wake Lock** — mantém a tela acesa durante a pilotagem (compatibilidade delegada pelo SO quando em pause)
+- **Persistência** — `localStorage` auto-save (ODO, TRIP, preferências noturnas)
+- **PWA instalável** — offline-first via Service Worker com cache + atualização em segundo plano
+- **Mobile-First** — `clamp()`, `100dvh`, safe-area insets (notch/pill), targets de toque ≥ 46px
 
 ## 🚀 Como Executar
 
-### Opção 1: Servidor Local (Recomendado)
+### Local (desenvolvimento)
 ```bash
-# Python 3
 python -m http.server 8080
-
-# Node.js
-npx serve .
-
-# PHP
-php -S localhost:8080
 ```
-Acesse `http://localhost:8080` no celular.
+Abra `http://localhost:8080`.
 
-### Opção 2: HTTPS Local (Necessário para GPS + Wake Lock + PWA)
-```bash
-# mkcert para certificado local confiável
-mkcert localhost 127.0.0.1 ::1
+> ⚠️ **GPS, Wake Lock e PWA exigem HTTPS** (ou localhost). Em produção use HTTPS.
 
-# Servidor com HTTPS
-npx serve -l 8080 --ssl-cert localhost.pem --ssl-key localhost-key.pem
-```
-
-### Opção 3: Deploy Rápido
-- **Netlify/Vercel**: Arraste a pasta para deploy
-- **GitHub Pages**: Push para repo e ative Pages
-- **Cloudflare Pages**: Conecte repo
-
-> ⚠️ **GPS, Wake Lock e PWA exigem HTTPS** (ou localhost). HTTP não funcionará no celular.
+### Produção (gratuito, com HTTPS)
+- **Vercel / Netlify**: importe o repositório → deploy automático
+- **GitHub Pages**: Settings → Pages → Source: *Deploy from a branch* → `master` → `/ (root)`
+- **Cloudflare Pages**: conecte o repositório (sem build, output: raiz)
 
 ## 📱 Instalação no Celular (PWA)
 
-1. Abra no Chrome/Edge/Safari mobile via HTTPS
-2. Menu → "Instalar app" / "Adicionar à tela inicial"
-3. Ícone aparece no launcher como app nativo
-4. Abre em tela cheia (fullscreen)
+1. Abra a URL HTTPS no Chrome/Edge/Safari mobile
+2. Menu → **Instalar app** / **Adicionar à tela inicial**
+3. Abre em tela cheia como app nativo
 
-## 🧪 Testes
+## 🎮 Interações
 
-Abra `test-harness.html` no navegador e clique em **Executar Todos os Testes**.
+| Gesto | Ação |
+|-------|------|
+| Toque no TRIP | Zera o odômetro parcial |
+| Toque no ODO total | Abre configurações |
+| **Segurar o dedo fora do painel (800 ms)** | Abre o painel de configurações |
+| Tecla `N` (desktop) | Alterna dia/noite |
+| Setas ↑/↓ (desktop) | Simula aceleração/freio (sem GPS) |
 
-22 testes cobrindo:
-- Layout & Responsividade (6)
-- Funcionalidades Core (6)
-- Persistência & APIs Nativas (4)
-- Estética LCD (3)
-- PWA & Acessibilidade (3)
+### Painel de Configurações
+- **Calibrar ODO** — define a quilometragem real da moto
+- **Zerar Trip** — reseta o odômetro parcial
+- **Modo Noturno** — cores customizadas de traços e números + toggle manual
 
-## 🎨 Personalização
+## 🛡️ Permissões
 
-### Ajustar ODO Inicial
-1. Toque em **AJUSTAR ODO**
-2. Digite a quilometragem real do hodômetro da moto
-3. Confirme - o app soma automaticamente o TRIP A ao valor base
-
-### Resetar TRIP A
-- Toque em **RESET TRIP** (área ampla para uso com luva)
+- **Localização (GPS)** — obrigatória para velocidade em tempo real
+- **Wake Lock** — solicitado automaticamente (silencioso, sem prompt)
 
 ## 🔧 Tecnologias
 
-- **HTML5** semântico + ARIA
-- **CSS3** - Custom Properties, clamp(), Grid/Flex, Media Queries
-- **Vanilla JS** - ES Modules, Geolocation, Wake Lock, Battery, localStorage
-- **PWA** - Manifest + Service Worker (cache-first)
-- **Fontes** - Orbitron (Google Fonts) + fallbacks locais
+- **HTML5** — `dialog` nativo para configurações
+- **CSS3** — Custom Properties, Gradients, `env(safe-area-inset-*)`, Media Queries
+- **Vanilla JS** — Geolocation, Haversine, Wake Lock, `requestAnimationFrame`
+- **PWA** — Manifest + Service Worker (cache-first com atualização em background)
+- **Fontes** — Titillium Web (mostrador) + Orbitron (relógio LCD)
 
-## 📐 Breakpoints Testados
+## 🗂️ Estrutura
 
-| Dispositivo | Largura | Layout |
-|-------------|---------|--------|
-| Galaxy Fold | 280px | Portrait stack |
-| iPhone SE | 375px | Standard |
-| Pixel 7 | 412px | Standard |
-| Split 50% | ~180px | Compacto |
-| Split 30% | ~120px | Mínimo |
-| Landscape | 500px altura | Compacto |
-
-## 🛡️ Permissões Necessárias
-
-- **Localização** (GPS) - Obrigatório para velocímetro
-- **Wake Lock** - Automático ao carregar
-- **Bateria** - Somente leitura, sem prompt
+```
+├── index.html        # Painel + dialog de configurações
+├── style.css         # Estilos (modo dia/noite, toasts, dialogo)
+├── main.js           # GPS, física da agulha, odômetros, relógio, config
+├── manifest.json     # Manifest PWA
+├── sw.js             # Service Worker (offline-first)
+└── icons/            # Ícones PNG 192/512 (any + maskable)
+```
 
 ## 📄 Licença
 
-MIT - Livre para uso pessoal e comercial.
+MIT — livre para uso pessoal e comercial.
