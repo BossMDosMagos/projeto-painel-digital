@@ -1,10 +1,11 @@
-const CACHE_NAME = 'speedometer-v2';
+const CACHE_NAME = 'speedometer-v3';
 const ASSETS = [
   './',
   './index.html',
   './style.css',
   './main.js',
   './manifest.json',
+  './DS-DIGIB.TTF',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];

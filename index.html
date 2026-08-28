@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@1,700;1,900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@1,700;1,900&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -63,7 +63,20 @@
   </dialog>
 
   <!-- RELÓGIO LCD 24H -->
-  <div class="clock-overlay" id="clock-display" aria-label="Relógio">00:00:00</div>
+  <div class="clock-container" id="clock-wrap" aria-label="Relógio">
+    <div class="clock-display">
+      <div class="time-wrapper">
+        <span class="digit" id="h1">0</span>
+        <span class="digit" id="h2">0</span>
+        <span class="colon">:</span>
+        <span class="digit" id="m1">0</span>
+        <span class="digit" id="m2">0</span>
+        <span class="colon-sec">:</span>
+        <span class="digit-sec" id="s1">0</span>
+        <span class="digit-sec" id="s2">0</span>
+      </div>
+    </div>
+  </div>
 
   <!-- TOAST (feedback não-bloqueante) -->
   <div class="toast-container" id="toast-container" aria-live="polite"></div>

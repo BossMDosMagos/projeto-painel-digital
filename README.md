@@ -61,16 +61,17 @@ Abra `http://localhost:8080`.
 - **CSS3** — Custom Properties, Gradients, `env(safe-area-inset-*)`, Media Queries
 - **Vanilla JS** — Geolocation, Haversine, Wake Lock, `requestAnimationFrame`
 - **PWA** — Manifest + Service Worker (cache-first com atualização em background)
-- **Fontes** — Titillium Web (mostrador) + Orbitron (relógio LCD)
+- **Fontes** — Titillium Web (mostrador) + DS-Digital (relógio LCD local, offline)
 
 ## 🗂️ Estrutura
 
 ```
 ├── index.html        # Painel + dialog de configurações
-├── style.css         # Estilos (modo dia/noite, toasts, dialogo)
+├── style.css         # Estilos (modo dia/noite, toasts, dialogo, relógio LCD)
 ├── main.js           # GPS, física da agulha, odômetros, relógio, config
 ├── manifest.json     # Manifest PWA
 ├── sw.js             # Service Worker (offline-first)
+├── DS-DIGIB.TTF      # Fonte LCD do relógio (+ DIGITAL.TXT, licença do autor)
 └── icons/            # Ícones PNG 192/512 (any + maskable)
 ```
 

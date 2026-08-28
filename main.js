@@ -121,13 +121,17 @@ function showToast(message, type = 'success', duration = 2200) {
 
 /* RELÓGIO LCD 24H */
 function initClock() {
-  const clockEl = document.getElementById('clock-display');
-  if (!clockEl) return;
+  const els = ['h1', 'h2', 'm1', 'm2', 's1', 's2'].map(id => document.getElementById(id));
+  if (!els[0]) return;
 
   const update = () => {
     const now = new Date();
     const pad = n => String(n).padStart(2, '0');
-    clockEl.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    const h = pad(now.getHours());
+    const m = pad(now.getMinutes());
+    const s = pad(now.getSeconds());
+    const digits = [h[0], h[1], m[0], m[1], s[0], s[1]];
+    els.forEach((el, i) => { if (el) el.textContent = digits[i]; });
   };
 
   update();
