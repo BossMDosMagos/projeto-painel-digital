@@ -273,12 +273,29 @@
 
     <div class="nav-arrow-box">
       <svg class="nav-arrow" id="nav-arrow" viewBox="0 0 64 64" aria-hidden="true">
-        <path id="nav-arrow-main" d="M32 6 L50 54 L32 44 L14 54 Z"/>
-        <g id="nav-arrow-roundabout" style="display:none">
-          <path d="M32 32 m-18 0 a18 18 0 1 1 36 0 a18 18 0 1 1 -36 0" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
-          <path d="M32 14 L40 30 L32 26 L24 30 Z"/>
+        <path id="ar-straight" d="M32 4 L38 12 L35 12 L35 60 L29 60 L29 12 L26 12 Z"/>
+        <g id="ar-slight-right" style="display:none">
+          <path d="M32 4 L38 12 L35 12 L35 60 L29 60 L29 12 L26 12 Z" transform="rotate(18 32 32)"/>
         </g>
-        <g id="nav-arrive" style="display:none">
+        <g id="ar-slight-left" style="display:none">
+          <path d="M32 4 L38 12 L35 12 L35 60 L29 60 L29 12 L26 12 Z" transform="rotate(-18 32 32)"/>
+        </g>
+        <g id="ar-uturn" style="display:none">
+          <path d="M32 4 L38 12 L35 12 L35 60 L29 60 L29 12 L26 12 Z" transform="rotate(180 32 32)"/>
+        </g>
+        <g id="ar-right" style="display:none">
+          <path class="ar-arm" d="M12 55 V 24 Q12 11 26 11 H 47"/>
+          <path class="ar-head" d="M37 2 L59 14 L37 26 Z"/>
+        </g>
+        <g id="ar-left" style="display:none">
+          <path class="ar-arm" d="M52 55 V 24 Q52 11 38 11 H 17"/>
+          <path class="ar-head" d="M27 2 L5 14 L27 26 Z"/>
+        </g>
+        <g id="ar-roundabout" style="display:none">
+          <path class="ar-ring" d="M32 32 m-18 0 a18 18 0 1 1 36 0 a18 18 0 1 1 -36 0"/>
+          <path class="ar-head" d="M32 12 L41 29 L32 25 L23 29 Z"/>
+        </g>
+        <g id="ar-arrive" style="display:none">
           <path d="M18 52 L22 28 L46 28 L50 52 Z"/>
           <rect x="28" y="6" width="8" height="16" rx="2"/>
         </g>

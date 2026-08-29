@@ -1,4 +1,4 @@
-const CACHE_NAME = 'speedometer-v22';
+const CACHE_NAME = 'speedometer-v23';
 const ASSETS = [
   './',
   './index.html',

@@ -225,26 +225,53 @@ function osrmToIcon(typeStr, modifierStr) {
   return 'straight';
 }
 
+/* Texto de instrução em português para cada ícone de manobra */
+function instructionByIcon(type) {
+  switch (type) {
+    case 'left': return 'Vire à esquerda';
+    case 'right': return 'Vire à direita';
+    case 'slight-left':
+    case 'keep-left':
+    case 'merge-left': return 'Mantenha à esquerda';
+    case 'slight-right':
+    case 'keep-right':
+    case 'merge-right': return 'Mantenha à direita';
+    case 'uturn': return 'Faça o retorno';
+    case 'roundabout': return 'Entre na rotatória';
+    case 'arrive': return 'Você chegou';
+    default: return 'Siga em frente';
+  }
+}
+
+function osrmToInstruction(typeStr, modifierStr) {
+  return instructionByIcon(osrmToIcon(typeStr, modifierStr));
+}
+
+/* Elemento SVG fixo para cada tipo de manobra */
+const ICON_BY_MANEUVER = {
+  straight: 'ar-straight', 'go-straight': 'ar-straight',
+  straight_mandatory: 'ar-straight', 'go-straight-mandatory': 'ar-straight',
+  left: 'ar-left', left_mandatory: 'ar-left',
+  'keep-left': 'ar-left', 'merge-left': 'ar-left',
+  right: 'ar-right', right_mandatory: 'ar-right',
+  'keep-right': 'ar-right', 'merge-right': 'ar-right',
+  'slight-left': 'ar-slight-left', 'slight-left-mandatory': 'ar-slight-left',
+  'slight-right': 'ar-slight-right', 'slight-right-mandatory': 'ar-slight-right',
+  uturn: 'ar-uturn', 'uturn-left': 'ar-uturn', 'uturn-right': 'ar-uturn',
+  roundabout: 'ar-roundabout',
+  arrive: 'ar-arrive'
+};
+
 function setManeuverIcon(type) {
   const arrow = document.getElementById('nav-arrow');
-  const main = document.getElementById('nav-arrow-main');
-  const roundabout = document.getElementById('nav-arrow-roundabout');
-  const arrive = document.getElementById('nav-arrive');
-  if (!arrow || !main || !roundabout || !arrive) return;
+  if (!arrow) return;
 
+  for (const el of arrow.children) el.style.display = 'none';
   arrow.classList.remove('idle');
-  main.style.display = 'none';
-  roundabout.style.display = 'none';
-  arrive.style.display = 'none';
 
-  if (type === 'roundabout') {
-    roundabout.style.display = '';
-  } else if (type === 'arrive') {
-    arrive.style.display = '';
-  } else {
-    main.style.display = '';
-    arrow.style.transform = `rotate(${MANEUVER_ROT[type] ?? 0}deg)`;
-  }
+  const target = ICON_BY_MANEUVER[type] || 'ar-straight';
+  const el = document.getElementById(target);
+  if (el) el.style.display = '';
 }
 
 function renderDistance(meters) {
@@ -258,16 +285,10 @@ function renderDistance(meters) {
 
 function idleNavigationPanel() {
   const arrow = document.getElementById('nav-arrow');
-  const main = document.getElementById('nav-arrow-main');
-  const roundabout = document.getElementById('nav-arrow-roundabout');
-  const arrive = document.getElementById('nav-arrive');
   if (arrow) {
+    for (const el of arrow.children) el.style.display = 'none';
     arrow.classList.add('idle');
-    arrow.style.transform = 'rotate(0deg)';
   }
-  if (main) main.style.display = 'none';
-  if (roundabout) roundabout.style.display = 'none';
-  if (arrive) arrive.style.display = 'none';
   renderDistance(null);
 }
 
@@ -277,7 +298,7 @@ function renderNavigation() {
   if (!title || !street) return;
 
   if (navState.maneuver) {
-    title.textContent = 'PRÓXIMA MANOBRA';
+    title.textContent = navState.maneuver.label || 'Siga em frente';
     street.textContent = navState.maneuver.street || 'Siga a via';
     renderDistance(navState.maneuver.dist);
     setManeuverIcon(navState.maneuver.type);
@@ -328,16 +349,18 @@ function updateNavToggleLabel() {
 
 /* Exibe a instrução do passo atual (ícone fixo + distância + rua) */
 function showManeuver(step, distM) {
+  const type = osrmToIcon(step.type, step.modifier);
   navState.maneuver = {
     dist: distM,
-    type: osrmToIcon(step.type, step.modifier),
+    type,
+    label: instructionByIcon(type),
     street: step.street || 'Siga em frente'
   };
   const title = document.getElementById('nav-title');
   const streetEl = document.getElementById('nav-street');
-  if (title) title.textContent = 'PRÓXIMA MANOBRA';
+  if (title) title.textContent = navState.maneuver.label;
   if (streetEl) streetEl.textContent = navState.maneuver.street;
-  setManeuverIcon(navState.maneuver.type);
+  setManeuverIcon(type);
   renderDistance(distM);
   setRouteUi();
 }
@@ -659,9 +682,11 @@ window.atualizarNavegacao = function (distanciaM, tipoManobra, nomeRua) {
   if (!Number.isFinite(d) || d < 0) {
     navState.maneuver = null;
   } else {
+    const type = normalizeManeuver(tipoManobra);
     navState.maneuver = {
       dist: d,
-      type: normalizeManeuver(tipoManobra),
+      type,
+      label: instructionByIcon(type),
       street: typeof nomeRua === 'string' ? nomeRua.trim() : ''
     };
   }
