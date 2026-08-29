@@ -197,8 +197,17 @@ async function requestWakeLock() {
   }
 }
 
-/* GPS — watchPosition com Haversine para velocidade + distância */
+/* GPS — watchPosition com Haversine para velocidade + distância.
+   O wrapper Android nativo abre com ...?native=1: aí o GPS vem do serviço
+   de primeiro plano do app (funciona até em segundo plano) via __panelNativePos */
+const NATIVE_MODE = new URLSearchParams(location.search).get('native') === '1';
+
 function initGPS() {
+  if (NATIVE_MODE) {
+    showToast('Modo nativo: GPS via app Android', '', 2000);
+    return; // o wrapper injeta as leituras por window.__panelNativePos
+  }
+
   if (!('geolocation' in navigator)) {
     updateGPSStatus(null);
     showToast('GPS não suportado neste dispositivo', 'error', 3000);
@@ -218,9 +227,11 @@ function initGPS() {
 
 function handleGPSPosition(pos) {
   const { latitude, longitude, accuracy, speed } = pos.coords;
-  const timestamp = pos.timestamp;
+  processGPSReading(latitude, longitude, accuracy, speed, pos.timestamp);
+}
 
-  updateGPSStatus(accuracy);
+function processGPSReading(lat, lng, accuracyM, speedMS, timestamp) {
+  updateGPSStatus(accuracyM);
 
   if (state.isSelfTesting) return;
 
@@ -228,13 +239,13 @@ function handleGPSPosition(pos) {
 
   if (hasPrev) {
     const timeDeltaSec = (timestamp - lastGPSFix.at) / 1000;
-    const distanceKm = haversineKm(lastGPSFix.lat, lastGPSFix.lng, latitude, longitude);
+    const distanceKm = haversineKm(lastGPSFix.lat, lastGPSFix.lng, lat, lng);
 
-    if (accuracy <= GPS_CONFIG.minAccuracy && timeDeltaSec > 0) {
+    if (accuracyM <= GPS_CONFIG.minAccuracy && timeDeltaSec > 0) {
       state.gpsActive = true;
 
-      const speedKmh = (typeof speed === 'number' && speed >= 0)
-        ? speed * 3.6
+      const speedKmh = (typeof speedMS === 'number' && speedMS >= 0)
+        ? speedMS * 3.6
         : (distanceKm / (timeDeltaSec / 3600));
 
       if (speedKmh <= GPS_CONFIG.minSpeedThreshold) {
@@ -244,14 +255,25 @@ function handleGPSPosition(pos) {
         state.targetSpeed = speedKmh;
 
         if (distanceKm > 0.00001) {
-          updateOdometerFromGPS(distanceKm, accuracy);
+          updateOdometerFromGPS(distanceKm, accuracyM);
         }
       }
     }
   }
 
-  lastGPSFix = { lat: latitude, lng: longitude, at: timestamp };
+  lastGPSFix = { lat, lng, at: timestamp };
 }
+
+// Ponte com o app nativo: leituras (lat, lng, acc, speed m/s, timestamp) já em km/h convertidas aqui
+window.__panelNativePos = (lat, lng, accM, speedMS, timestamp) => {
+  processGPSReading(
+    Number(lat),
+    Number(lng),
+    Number(accM),
+    (typeof speedMS === 'number' && !Number.isNaN(speedMS)) ? Number(speedMS) : null,
+    Number(timestamp) || Date.now()
+  );
+};
 
 function haversineKm(lat1, lng1, lat2, lng2) {
   const R = 6371;

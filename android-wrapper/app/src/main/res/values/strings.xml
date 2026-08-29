@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Painel Digital</string>
+    <string name="notif_title">Painel Digital ativo</string>
+    <string name="notif_text">Registrando GPS para o odômetro e aviso de óleo…</string>
+    <string name="notif_channel">Rastreio do Painel</string>
+</resources>

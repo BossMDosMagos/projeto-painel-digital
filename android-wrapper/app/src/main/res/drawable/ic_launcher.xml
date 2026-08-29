@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- anel escuro -->
+    <path
+        android:fillColor="@color/dial_dark"
+        android:pathData="M54,54m-48,0a48,48 0 1,1 96,0a48,48 0 1,1 -96,0" />
+
+    <!-- mostrador branco -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,54m-34,0a34,34 0 1,1 68,0a34,34 0 1,1 -68,0" />
+
+    <!-- ponteiro vermelho apontando para cima (peedle) -->
+    <path
+        android:fillColor="@color/needle_red"
+        android:pathData="M54,56 L57,25 L51,25 Z" />
+
+    <!-- cubo do eixo -->
+    <path
+        android:fillColor="@color/dial_dark"
+        android:pathData="M54,54m-5,0a5,5 0 1,1 10,0a5,5 0 1,1 -10,0" />
+</vector>
