@@ -443,39 +443,55 @@ body.nav-split .gauge-container {
   max-width: calc(100svh - 48px);
 }
 
-/* ==== PAINEL DE NAVEGAÇÃO (lado direito, escuro) ==== */
+/* ==== PAINEL DE NAVEGAÇÃO — MOSTRADOR CIRCULAR (estilo relógio/velocímetro) ==== */
 .nav-panel {
   display: none;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(180deg, #171a20 0%, #0b0d10 100%);
-  border: 1px solid #2a3038;
-  border-radius: clamp(12px, 2.5vw, 22px);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-sizing: border-box;
+  position: relative;
+  width: min(38vw, calc(100svh - 96px));
+  aspect-ratio: 1 / 1;
+  max-width: calc(100svh - 96px);
+  flex: 0 0 auto;
+  align-self: center;
+  container-type: inline-size;
+  border-radius: 50%;
   color: #e8edf3;
-  padding: clamp(10px, 2vw, 18px);
   text-align: center;
   overflow: hidden;
-  min-width: 0;
+  padding: clamp(22px, 8.5cqw, 40px) clamp(22px, 8.5cqw, 40px);
+
+  /* Fundo escuro fosco (radial suave) */
+  background: radial-gradient(circle at 50% 28%, #171a20 0%, #0f1015 52%, #0a0b0e 100%);
+
+  /* Moldura metálica dupla (aro + contorno interno) */
+  border: clamp(6px, 2.1cqw, 10px) solid #2b2d35;
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.55),
+    0 0 0 clamp(1px, 0.35cqw, 2px) rgba(0, 0, 0, 0.65),
+    inset 0 2px 5px rgba(255, 255, 255, 0.1),
+    inset 0 0 0 clamp(2px, 0.85cqw, 4px) #1b1d23,
+    inset 0 -10px 22px rgba(0, 0, 0, 0.9);
 }
 
 body.nav-split .nav-panel {
   display: flex;
-  flex: 1 1 auto;
-  align-self: stretch;
 }
 
 .nav-header {
   font-family: 'Titillium Web', 'Arial Black', sans-serif;
-  font-size: clamp(13px, 3.4vw, 22px);
-  font-weight: 900;
-  line-height: 1.15;
+  font-size: clamp(14px, 6.8cqw, 28px);
+  font-weight: 800;
+  font-style: italic;
+  line-height: 1.12;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   color: #ffffff;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
-  min-height: calc(clamp(13px, 3.4vw, 22px) * 1.15);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+  width: 100%;
+  min-height: calc(clamp(14px, 6.8cqw, 28px) * 1.12);
 }
 
 .nav-arrow-box {
@@ -488,10 +504,11 @@ body.nav-split .nav-panel {
 }
 
 .nav-arrow {
-  width: clamp(70px, 22vw, 150px);
+  width: clamp(64px, 24cqw, 100px);
   height: auto;
   color: #ffffff;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.65));
+  flex: 0 0 auto;
 }
 .nav-arrow path {
   fill: currentColor;
@@ -516,30 +533,40 @@ body.nav-split .nav-panel {
 
 .nav-distance {
   font-family: 'DS-Digital', monospace;
-  font-size: clamp(34px, 11vw, 84px);
+  font-size: clamp(28px, 11.5cqw, 46px);
+  font-weight: 700;
   line-height: 1;
-  color: #dff1c0;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  color: #d2f235;
+  text-shadow: 0 2px 10px rgba(210, 242, 53, 0.45), 0 2px 6px rgba(0, 0, 0, 0.6);
   white-space: nowrap;
+  width: 100%;
 }
 .nav-dist-unit {
-  font-size: 0.38em;
-  margin-left: 0.3em;
-  color: #aeb8c3;
+  font-size: 0.42em;
+  font-family: 'DS-Digital', monospace;
+  margin-left: 0.25em;
+  color: #c6cf9a;
 }
 
 .nav-street {
   font-family: 'Titillium Web', 'Arial Black', sans-serif;
-  font-size: clamp(13px, 3.2vw, 20px);
-  font-weight: 700;
-  color: #fff;
+  font-size: clamp(13px, 4.6cqw, 20px);
+  font-weight: 800;
+  font-style: italic;
+  color: #e0e0e0;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Retrato: empilha (velocímetro em cima, navegação embaixo) */
+.nav-route-btn {
+  font-size: clamp(9px, 3.2cqw, 13px);
+  padding: clamp(4px, 1.6cqw, 7px) clamp(10px, 3.6cqw, 16px);
+  border-radius: 999px;
+}
+
+/* Retrato: empilha (velocímetro em cima, navegação circular embaixo) */
 @media (orientation: portrait) {
   body.nav-split .panel-row {
     flex-direction: column;
@@ -548,11 +575,8 @@ body.nav-split .nav-panel {
     width: min(90vw, calc(50svh - 48px));
   }
   body.nav-split .nav-panel {
-    width: min(90vw, calc(100svh - 12px));
-    height: auto;
-  }
-  .nav-distance {
-    font-size: clamp(30px, 10vw, 54px);
+    width: min(82vw, calc(50svh - 64px));
+    max-width: calc(50svh - 64px);
   }
 }
 
