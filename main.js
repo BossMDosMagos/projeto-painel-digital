@@ -159,7 +159,8 @@ function updateGPSStatus(accuracyInMeters) {
    Sem rota configurada, o painel opera em modo bússola: a seta aponta
    o destino usando o rumo de deslocamento calculado do próprio GPS. */
 const navState = {
-  dest: null,        // { lat, lng, name }
+  dest: null,        // waypoint atual { lat, lng, name }
+  waypoints: [],     // sequência de destinos (rota manual Origem → Destino)
   maneuver: null,    // { dist, type, street }
   course: null,      // último rumo de deslocamento (graus)
   override: null     // força manual do split (true|false)
@@ -275,6 +276,7 @@ function renderNavigation() {
     street.textContent = 'Sem rota ativa';
     idleNavigationPanel();
   }
+  setRouteUi();
   updateNavToggleLabel();
 }
 
@@ -297,6 +299,11 @@ function updateBearingNav() {
   if (!navState.dest || navState.maneuver || !lastGPSFix) return;
 
   const dKm = haversineKm(lastGPSFix.lat, lastGPSFix.lng, navState.dest.lat, navState.dest.lng);
+  if (dKm * 1000 <= 25) {
+    advanceToNextWaypoint();
+    return;
+  }
+
   const brg = bearingDeg(lastGPSFix.lat, lastGPSFix.lng, navState.dest.lat, navState.dest.lng);
   renderDistance(dKm * 1000);
 
@@ -311,9 +318,138 @@ function updateBearingNav() {
   arrow.style.transform = `rotate(${rel}deg)`;
 }
 
+function advanceToNextWaypoint() {
+  if (!navState.dest || navState.waypoints.length === 0) return;
+
+  const idx = navState.waypoints.indexOf(navState.dest);
+  if (idx >= 0 && idx < navState.waypoints.length - 1) {
+    navState.dest = navState.waypoints[idx + 1];
+    showToast('Chegou — próximo destino', 'success', 1800);
+    renderNavigation();
+    return;
+  }
+  showToast('Você chegou ao destino final', 'success', 2600);
+  window.limparNavegacao();
+}
+
+/* ---- Rota de teste manual (dois campos de endereço) ---- */
+
+function parseLatLng(text) {
+  const m = text.match(/^(-?\d{1,3}(?:\.\d+)?)\s*[,;]\s*(-?\d{1,3}(?:\.\d+)?)$/);
+  if (!m) return null;
+  const lat = parseFloat(m[1]);
+  const lng = parseFloat(m[2]);
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  return { lat, lng, name: 'Coordenadas' };
+}
+
+async function geocodeAddress(query) {
+  const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=' +
+    encodeURIComponent(query);
+  const res = await fetch(url, { headers: { Accept: 'application/json' } });
+  if (!res.ok) throw new Error('Geocodificação indisponível (sem internet?)');
+  const list = await res.json();
+  if (!list || list.length === 0) throw new Error('Endereço não encontrado: "' + query.split(',')[0] + '"');
+  return {
+    lat: parseFloat(list[0].lat),
+    lng: parseFloat(list[0].lon),
+    name: (list[0].display_name || query).split(',').slice(0, 2).join(',')
+  };
+}
+
+async function resolvePlace(raw) {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const direct = parseLatLng(trimmed);
+  if (direct) return direct;
+  return geocodeAddress(trimmed);
+}
+
+async function startManualRoute() {
+  const originRaw = document.getElementById('cfg-route-origin').value.trim();
+  const destRaw = document.getElementById('cfg-route-dest').value.trim();
+
+  if (!originRaw && !destRaw) {
+    showToast('Digite ao menos um endereço', 'error', 2200);
+    return;
+  }
+
+  const btn = document.getElementById('btn-route-start');
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Localizando...';
+
+  let waypoints = [];
+  try {
+    const origin = await resolvePlace(originRaw);
+    if (origin) waypoints.push(origin);
+    const dest = await resolvePlace(destRaw);
+    if (dest) waypoints.push(dest);
+  } catch (e) {
+    showToast(e.message, 'error', 2600);
+    btn.disabled = false;
+    btn.textContent = original;
+    return;
+  }
+
+  btn.disabled = false;
+  btn.textContent = original;
+
+  if (waypoints.length === 0) return;
+  navState.waypoints = waypoints;
+  navState.dest = waypoints[0];
+  navState.maneuver = null;
+  navState.override = null;
+
+  const last = waypoints[waypoints.length - 1];
+  const first = waypoints[0];
+  showToast(
+    waypoints.length === 2
+      ? `Rota: ${first.name} → ${last.name}`
+      : `Rota para ${last.name}`,
+    'success', 2600
+  );
+
+  const dlg = document.getElementById('config-modal');
+  if (dlg && dlg.open) dlg.close();
+  renderNavigation();
+  updateNavLayout();
+}
+
+function setRouteUi() {
+  const status = document.getElementById('route-status');
+  const openBtn = document.getElementById('btn-open-route-setup');
+  if (status) status.textContent = navState.dest
+    ? `Em navegação: ${navState.dest.name}`
+    : '';
+  if (openBtn) openBtn.style.display = (navState.dest || navState.maneuver) ? 'none' : '';
+}
+
 function initNav() {
   const btn = document.getElementById('btn-toggle-nav');
   if (btn) btn.addEventListener('click', () => window.alternarNavegacao());
+
+  const btnStart = document.getElementById('btn-route-start');
+  if (btnStart) btnStart.addEventListener('click', startManualRoute);
+
+  const btnCancel = document.getElementById('btn-route-cancel');
+  if (btnCancel) {
+    btnCancel.addEventListener('click', () => {
+      window.limparNavegacao();
+      setRouteUi();
+    });
+  }
+
+  const btnSetup = document.getElementById('btn-open-route-setup');
+  if (btnSetup) {
+    btnSetup.addEventListener('click', () => {
+      const dlg = document.getElementById('config-modal');
+      if (dlg && typeof dlg.showModal === 'function' && !dlg.open) dlg.showModal();
+      const destInput = document.getElementById('cfg-route-dest');
+      if (destInput) setTimeout(() => destInput.focus(), 200);
+    });
+  }
+
   renderNavigation();
 }
 
@@ -339,7 +475,8 @@ window.atualizarDestino = function (lat, lng, nome) {
   const la = Number(lat);
   const ln = Number(lng);
   if (!Number.isFinite(la) || !Number.isFinite(ln)) return;
-  navState.dest = { lat: la, lng: ln, name: typeof nome === 'string' ? nome.trim() : '' };
+  navState.waypoints = [{ lat: la, lng: ln, name: typeof nome === 'string' ? nome.trim() : '' }];
+  navState.dest = navState.waypoints[0];
   navState.maneuver = null;
   navState.override = null;
   renderNavigation();
@@ -350,6 +487,7 @@ window.atualizarDestino = function (lat, lng, nome) {
 window.limparNavegacao = function () {
   const wasActive = !!(navState.dest || navState.maneuver);
   navState.dest = null;
+  navState.waypoints = [];
   navState.maneuver = null;
   navState.override = null;
   renderNavigation();

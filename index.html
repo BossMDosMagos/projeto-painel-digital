@@ -93,6 +93,17 @@
         <button id="btn-toggle-nav" class="btn-action">Abrir modo dividido</button>
       </div>
 
+      <div class="config-group">
+        <label>Rota de Teste (sem apps — geocodificação Nominatim):</label>
+        <input type="text" id="cfg-route-origin" placeholder="Origem (ex.: Av. Brasil, 1500)" autocomplete="off" spellcheck="false">
+        <input type="text" id="cfg-route-dest" placeholder="Destino" autocomplete="off" spellcheck="false">
+        <div class="input-inline">
+          <button id="btn-route-start" class="btn-action">Iniciar Rota</button>
+          <button id="btn-route-cancel" class="btn-danger">Cancelar</button>
+        </div>
+        <p class="oil-summary" id="route-status"></p>
+      </div>
+
       <button id="btn-close-config" class="btn-close">Fechar</button>
     </div>
   </dialog>
@@ -279,6 +290,7 @@
     </div>
 
     <div class="nav-street" id="nav-street">Sem rota ativa</div>
+    <button type="button" class="btn-action nav-route-btn" id="btn-open-route-setup">Configurar rota</button>
   </div>
 
   </main>

@@ -300,6 +300,22 @@ body.night-mode .clock-display {
   font-size: 16px;
 }
 
+.config-group input[type="text"] {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 46px;
+  background: #0d0e10;
+  border: 1px solid #343a40;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.nav-route-btn {
+  margin-top: 10px;
+}
+
 .color-pickers {
   display: flex;
   gap: 16px;
