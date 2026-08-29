@@ -44,12 +44,14 @@ rastreio para — por isso os ajustes do HyperOS abaixo.
 ## Navegação 50/50 (automática)
 
 - Enquanto roda uma corrida da 99, o painel captura o endereço de destino,
-  geocodifica (Nominatim, grátis) e **ativa sozinho os modos**:
-  - **Bússola** (padrão): seta aponta o destino + distância em linha reta
-    (estilo Beeline) — não precisa de chave nenhuma.
-  - **Turn-by-turn**: preencha `Navigator.ORS_API_KEY` em `android-wrapper/.../Navigator.kt`
-    com a chave gratuita de **openrouteservice.org** (+2.000 consultas/dia). Aí o painel
-    passa a mostrar metros reais, seta de manobra e nome da rua.
+  geocodifica (Nominatim, grátis) e **ativa sozinho o modo dividido**.
+- O **turn-by-turn real é feito pelo próprio painel** (no WebView), pelo roteador
+  público **OSRM** (`router.project-osrm.org`) — **sem precisar de chave**.
+  A tela mostra ícone fixo de manobra (reto/à esquerda/à direita/rotatória),
+  distância contando até a próxima conversão e o nome da próxima rua.
+- Para testar em pista sem o app 99: use os campos **Origem/Destino** no menu —
+  há **autocomplete** (Nominatim) que prioriza endereços na região do GPS,
+  ou digite coordenadas `lat, lng` direto.
 - Quando a corrida é finalizada, o painel **volta sozinho** para o velocímetro em tela cheia.
 - Botão manual em **Configurações** alterna o modo dividido quando você quiser.
 

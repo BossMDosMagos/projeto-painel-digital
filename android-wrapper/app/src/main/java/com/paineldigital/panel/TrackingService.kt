@@ -100,9 +100,6 @@ class TrackingService : Service(), LocationListener {
     }
 
     override fun onLocationChanged(location: Location) {
-        LastLocation.set(location.latitude, location.longitude)
-        Navigator.onPosition(location.latitude, location.longitude)
-
         val injector = TrackingBridge.injector ?: return
 
         val lat = "%.7f".format(Locale.US, location.latitude)

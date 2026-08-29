@@ -151,20 +151,29 @@ function updateGPSStatus(accuracyInMeters) {
 }
 
 /* ===== NAVEGAÇÃO TURN-BY-TURN (módulo dividido 50/50) =====
-   API pública, injetável pelo app nativo ou por uma API:
+   API pública, injetável pelo app nativo:
    - window.atualizarNavegacao(distanciaM, tipoManobra, nomeRua)
-   - window.atualizarDestino(lat, lng, nome)
+   - window.atualizarDestino(lat, lng, nome)  → traça rota real (OSRM)
    - window.limparNavegacao()
    - window.alternarNavegacao()  (toggle manual)
-   Sem rota configurada, o painel opera em modo bússola: a seta aponta
-   o destino usando o rumo de deslocamento calculado do próprio GPS. */
+   Ícones FIXOS de manobra (reto/à esquerda/à direita/slight/rotatória/
+   chegada), distância contando até a próxima conversão e nome da próxima
+   rua, como em Waze/Maps. A rota vem do roteador público OSRM (sem chave);
+   os passos avançam conforme a proximidade do GPS a cada ponto de manobra. */
+const STEP_ARRIVE_M = 25;      // distância para considerar a manobra atingida
+const ROUTE_SEARCH_PAD = 0.05; // ~5 km ao redor do GPS p/ autocomplete local
 const navState = {
-  dest: null,        // waypoint atual { lat, lng, name }
-  waypoints: [],     // sequência de destinos (rota manual Origem → Destino)
-  maneuver: null,    // { dist, type, street }
-  course: null,      // último rumo de deslocamento (graus)
-  override: null     // força manual do split (true|false)
+  dest: null,          // alvo desta perna { lat, lng, name }
+  pendingDest: null,   // próximo alvo (rota manual com origem)
+  steps: [],           // [{ lat, lng, type, modifier, street }]
+  stepIndex: 0,
+  maneuver: null,      // { dist, type, street } — instrução exibida
+  routeBusy: false,
+  routeError: false,
+  override: null       // força manual do split (true|false)
 };
+
+const routeSelections = { origin: null, dest: null };
 
 const MANEUVER_ROT = {
   straight: 0, 'go-straight': 0, straight_mandatory: 0, 'go-straight-mandatory': 0,
@@ -174,17 +183,6 @@ const MANEUVER_ROT = {
   'slight-right': 20, 'slight-right-mandatory': 20,
   uturn: 180, 'uturn-left': 180, 'uturn-right': 180
 };
-
-function bearingDeg(lat1, lng1, lat2, lng2) {
-  const toRad = (deg) => (deg * Math.PI) / 180;
-  const toDeg = (rad) => (rad * 180) / Math.PI;
-  const f1 = toRad(lat1);
-  const f2 = toRad(lat2);
-  const dL = toRad(lng2 - lng1);
-  const y = Math.sin(dL) * Math.cos(f2);
-  const x = Math.cos(f1) * Math.sin(f2) - Math.sin(f1) * Math.cos(f2) * Math.cos(dL);
-  return (toDeg(Math.atan2(y, x)) + 360) % 360;
-}
 
 function formatDistLabel(meters) {
   if (!Number.isFinite(meters) || meters < 0) return { v: '—', u: '' };
@@ -201,6 +199,29 @@ function normalizeManeuver(type) {
   if (t.includes('left')) return t.includes('slight') ? 'slight-left' : 'left';
   if (t.includes('right')) return t.includes('slight') ? 'slight-right' : 'right';
   if (t.includes('uturn') || t.includes('u-turn')) return 'uturn';
+  return 'straight';
+}
+
+/* Converte os tipos de manobra do OSRM em ícone fixo do painel */
+function osrmToIcon(typeStr, modifierStr) {
+  const t = String(typeStr || '').toLowerCase();
+  const m = String(modifierStr || '').toLowerCase();
+
+  if (t === 'arrive') return 'arrive';
+  if (t === 'roundabout' || t === 'rotary') return 'roundabout';
+  if (t === 'exit roundabout' || t === 'exit rotary') return normalizeManeuver(m);
+  if (t === 'turn' || t === 'end of road') return normalizeManeuver(m || 'straight');
+  if (t === 'new name' || t === 'continue' || t === 'merge' || t === 'on ramp' ||
+      t === 'off ramp' || t === 'fork' || t === 'depart') {
+    if (m === 'left') return 'left';
+    if (m === 'right') return 'right';
+    if (m === 'slight left') return 'slight-left';
+    if (m === 'slight right') return 'slight-right';
+    if (m === 'sharp left') return 'left';
+    if (m === 'sharp right') return 'right';
+    if (m === 'uturn') return 'uturn';
+    return 'straight';
+  }
   return 'straight';
 }
 
@@ -262,15 +283,25 @@ function renderNavigation() {
     setManeuverIcon(navState.maneuver.type);
   } else if (navState.dest) {
     title.textContent = (navState.dest.name || 'DESTINO').toUpperCase().slice(0, 22);
-    street.textContent = 'Em direção ao destino';
-    const arrow = document.getElementById('nav-arrow');
-    const main = document.getElementById('nav-arrow-main');
-    const roundabout = document.getElementById('nav-arrow-roundabout');
-    const arrive = document.getElementById('nav-arrive');
-    if (arrow) arrow.classList.remove('idle');
-    if (main) main.style.display = '';
-    if (roundabout) roundabout.style.display = 'none';
-    if (arrive) arrive.style.display = 'none';
+    if (navState.routeBusy) {
+      street.textContent = 'Calculando rota…';
+      setManeuverIcon('straight');
+      renderDistance(null);
+    } else if (navState.routeError) {
+      street.textContent = 'Rota direta ao destino';
+      setManeuverIcon('straight');
+      if (lastGPSFix && navState.dest) {
+        renderDistance(
+          haversineKm(lastGPSFix.lat, lastGPSFix.lng, navState.dest.lat, navState.dest.lng) * 1000
+        );
+      } else {
+        renderDistance(null);
+      }
+    } else {
+      street.textContent = 'Preparando navegação…';
+      setManeuverIcon('straight');
+      renderDistance(null);
+    }
   } else {
     title.textContent = 'DESTINO';
     street.textContent = 'Sem rota ativa';
@@ -295,41 +326,210 @@ function updateNavToggleLabel() {
   btn.textContent = on ? 'Só velocímetro' : 'Abrir modo dividido';
 }
 
-function updateBearingNav() {
-  if (!navState.dest || navState.maneuver || !lastGPSFix) return;
-
-  const dKm = haversineKm(lastGPSFix.lat, lastGPSFix.lng, navState.dest.lat, navState.dest.lng);
-  if (dKm * 1000 <= 25) {
-    advanceToNextWaypoint();
-    return;
-  }
-
-  const brg = bearingDeg(lastGPSFix.lat, lastGPSFix.lng, navState.dest.lat, navState.dest.lng);
-  renderDistance(dKm * 1000);
-
-  const arrow = document.getElementById('nav-arrow');
-  if (!arrow) return;
-  let rel = 0;
-  if (typeof navState.course === 'number') {
-    rel = ((brg - navState.course) % 360 + 360) % 360;
-    if (rel > 180) rel -= 360;
-    else if (rel < -180) rel += 360;
-  }
-  arrow.style.transform = `rotate(${rel}deg)`;
+/* Exibe a instrução do passo atual (ícone fixo + distância + rua) */
+function showManeuver(step, distM) {
+  navState.maneuver = {
+    dist: distM,
+    type: osrmToIcon(step.type, step.modifier),
+    street: step.street || 'Siga em frente'
+  };
+  const title = document.getElementById('nav-title');
+  const streetEl = document.getElementById('nav-street');
+  if (title) title.textContent = 'PRÓXIMA MANOBRA';
+  if (streetEl) streetEl.textContent = navState.maneuver.street;
+  setManeuverIcon(navState.maneuver.type);
+  renderDistance(distM);
+  setRouteUi();
 }
 
-function advanceToNextWaypoint() {
-  if (!navState.dest || navState.waypoints.length === 0) return;
+/* Motor turn-by-turn — roda a cada fix do GPS */
+function updateTurnByTurn() {
+  if (!navState.dest || navState.routeBusy || !lastGPSFix) return;
+  if (!navState.steps.length) return;
 
-  const idx = navState.waypoints.indexOf(navState.dest);
-  if (idx >= 0 && idx < navState.waypoints.length - 1) {
-    navState.dest = navState.waypoints[idx + 1];
+  if (navState.stepIndex >= navState.steps.length) return;
+
+  const step = navState.steps[navState.stepIndex];
+  const dM = haversineKm(lastGPSFix.lat, lastGPSFix.lng, step.lat, step.lng) * 1000;
+
+  if (dM <= STEP_ARRIVE_M) {
+    navState.stepIndex++;
+    if (navState.stepIndex >= navState.steps.length) {
+      onArriveDestination();
+      return;
+    }
+    return; // próximo passo entra no próximo fix
+  }
+  showManeuver(step, dM);
+}
+
+/* Chegou ao alvo: avança p/ a próxima perna (rota com origem) ou finaliza */
+function onArriveDestination() {
+  if (navState.pendingDest) {
+    const next = navState.pendingDest;
+    navState.pendingDest = null;
+    navState.dest = next;
+    navState.steps = [];
+    navState.stepIndex = 0;
+    navState.maneuver = null;
     showToast('Chegou — próximo destino', 'success', 1800);
-    renderNavigation();
+    fetchRouteToDest();
     return;
   }
-  showToast('Você chegou ao destino final', 'success', 2600);
-  window.limparNavegacao();
+
+  navState.maneuver = {
+    dist: 0,
+    type: 'arrive',
+    street: navState.dest && navState.dest.name ? navState.dest.name : 'Destino'
+  };
+  navState.steps = [];
+  navState.stepIndex = 0;
+  renderNavigation();
+  showToast('Você chegou ao destino!', 'success', 2600);
+  setTimeout(() => {
+    if (navState.dest && navState.steps.length === 0 && !navState.routeBusy) {
+      window.limparNavegacao();
+    }
+  }, 4000);
+}
+
+/* ---- Rota real via OSRM (público, sem chave) ---- */
+async function fetchRouteToDest() {
+  const dest = navState.dest;
+  if (!dest) return;
+
+  navState.routeBusy = true;
+  navState.routeError = false;
+  renderNavigation();
+
+  if (!lastGPSFix) {
+    navState.routeBusy = false;
+    navState.routeError = true;
+    renderNavigation();
+    showToast('Aguardando GPS para traçar a rota', 'error', 2400);
+    return;
+  }
+
+  const url = 'https://router.project-osrm.org/route/v1/driving/' +
+    `${lastGPSFix.lng},${lastGPSFix.lat};${dest.lng},${dest.lat}` +
+    '?alternatives=false&steps=true&overview=false&geometries=geojson';
+
+  try {
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!res.ok) throw new Error('rota ' + res.status);
+    const data = await res.json();
+    if (data.code !== 'Ok' || !data.routes || !data.routes.length) throw new Error('sem rota');
+
+    const stepsArr = data.routes[0].legs[0].steps;
+    const steps = stepsArr
+      .filter((s) => s.maneuver && s.maneuver.type !== 'depart')
+      .map((s) => ({
+        lat: s.maneuver.location[1],
+        lng: s.maneuver.location[0],
+        type: s.maneuver.type,
+        modifier: s.maneuver.modifier || '',
+        street: s.name && s.name !== '-' ? s.name : ''
+      }));
+
+    navState.steps = steps;
+    navState.stepIndex = 0;
+    navState.maneuver = null;
+    navState.routeBusy = false;
+    navState.routeError = steps.length === 0;
+    renderNavigation();
+    if (steps.length === 0) {
+      onArriveDestination(); // rota vazia = já chegou
+      return;
+    }
+    updateTurnByTurn();
+    showToast('Rota traçada — '+ navState.dest.name, 'success', 2200);
+  } catch (e) {
+    navState.routeBusy = false;
+    navState.routeError = true;
+    renderNavigation();
+    showToast('Rota indisponível — navegando direto ao destino', 'error', 2800);
+  }
+}
+
+/* ---- Autocomplete Nominatim com bias local (cerca do GPS) ---- */
+
+function buildViewbox() {
+  if (!lastGPSFix) return null;
+  const p = ROUTE_SEARCH_PAD;
+  const minLon = lastGPSFix.lng - p;
+  const minLat = lastGPSFix.lat - p;
+  const maxLon = lastGPSFix.lng + p;
+  const maxLat = lastGPSFix.lat + p;
+  return `${minLon},${minLat},${maxLon},${maxLat}`;
+}
+
+async function suggestAddress(query, viewbox) {
+  const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6' +
+    '&accept-language=pt-BR&addressdetails=0&q=' + encodeURIComponent(query);
+  const vb = viewbox || buildViewbox();
+  const finalUrl = vb ? url + '&viewbox=' + encodeURIComponent(vb) + '&bounded=1' : url;
+  const res = await fetch(finalUrl, { headers: { Accept: 'application/json' } });
+  if (!res.ok) throw new Error('geocoder ' + res.status);
+  return res.json();
+}
+
+function hookAutocomplete(inputId, key) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+
+  const box = document.createElement('div');
+  box.className = 'autocomplete';
+  input.parentNode.insertBefore(box, input.nextSibling);
+  const list = document.createElement('ul');
+  list.className = 'suggest-list';
+  box.appendChild(list);
+
+  let timer = null;
+
+  input.addEventListener('input', () => {
+    routeSelections[key] = null;
+    clearTimeout(timer);
+    timer = setTimeout(() => runAutocomplete(input, list, key), 260);
+  });
+
+  input.addEventListener('blur', () => {
+    setTimeout(() => { list.classList.remove('open'); }, 200); // p/ o clique registrar
+  });
+}
+
+async function runAutocomplete(input, list, key) {
+  const q = input.value.trim();
+  if (q.length < 3) {
+    list.classList.remove('open');
+    return;
+  }
+  let items = [];
+  try {
+    items = await suggestAddress(q);
+  } catch (e) {
+    list.classList.remove('open');
+    return;
+  }
+  list.innerHTML = '';
+  items.forEach((it) => {
+    const li = document.createElement('li');
+    li.title = it.display_name || '';
+    li.textContent = (it.display_name || '').split(',').slice(0, 3).join(',');
+    li.addEventListener('mousedown', (ev) => {
+      ev.preventDefault();
+      const short = (it.display_name || '').split(',').slice(0, 2).join(',');
+      input.value = short;
+      routeSelections[key] = {
+        input: short,
+        lat: parseFloat(it.lat),
+        lng: parseFloat(it.lon),
+        name: short
+      };
+      list.classList.remove('open');
+    });
+    list.appendChild(li);
+  });
+  list.classList.toggle('open', items.length > 0);
 }
 
 /* ---- Rota de teste manual (dois campos de endereço) ---- */
@@ -357,9 +557,11 @@ async function geocodeAddress(query) {
   };
 }
 
-async function resolvePlace(raw) {
+async function resolvePlace(raw, key) {
   const trimmed = raw.trim();
   if (!trimmed) return null;
+  const sel = routeSelections[key];
+  if (sel && sel.input === trimmed) return { lat: sel.lat, lng: sel.lng, name: sel.name };
   const direct = parseLatLng(trimmed);
   if (direct) return direct;
   return geocodeAddress(trimmed);
@@ -379,12 +581,11 @@ async function startManualRoute() {
   btn.disabled = true;
   btn.textContent = 'Localizando...';
 
-  let waypoints = [];
+  let origin = null;
+  let dest = null;
   try {
-    const origin = await resolvePlace(originRaw);
-    if (origin) waypoints.push(origin);
-    const dest = await resolvePlace(destRaw);
-    if (dest) waypoints.push(dest);
+    origin = await resolvePlace(originRaw, 'origin');
+    dest = await resolvePlace(destRaw, 'dest');
   } catch (e) {
     showToast(e.message, 'error', 2600);
     btn.disabled = false;
@@ -395,32 +596,27 @@ async function startManualRoute() {
   btn.disabled = false;
   btn.textContent = original;
 
-  if (waypoints.length === 0) return;
-  navState.waypoints = waypoints;
-  navState.dest = waypoints[0];
+  if (!origin && !dest) return;
+
+  navState.pendingDest = (origin && dest) ? dest : null;
+  navState.dest = origin || dest;
+  navState.steps = [];
+  navState.stepIndex = 0;
   navState.maneuver = null;
   navState.override = null;
-
-  const last = waypoints[waypoints.length - 1];
-  const first = waypoints[0];
-  showToast(
-    waypoints.length === 2
-      ? `Rota: ${first.name} → ${last.name}`
-      : `Rota para ${last.name}`,
-    'success', 2600
-  );
 
   const dlg = document.getElementById('config-modal');
   if (dlg && dlg.open) dlg.close();
   renderNavigation();
   updateNavLayout();
+  fetchRouteToDest();
 }
 
 function setRouteUi() {
   const status = document.getElementById('route-status');
   const openBtn = document.getElementById('btn-open-route-setup');
   if (status) status.textContent = navState.dest
-    ? `Em navegação: ${navState.dest.name}`
+    ? (navState.pendingDest ? `Em navegação: ${navState.dest.name} → ${navState.pendingDest.name}` : `Em navegação: ${navState.dest.name}`)
     : '';
   if (openBtn) openBtn.style.display = (navState.dest || navState.maneuver) ? 'none' : '';
 }
@@ -450,6 +646,9 @@ function initNav() {
     });
   }
 
+  hookAutocomplete('cfg-route-origin', 'origin');
+  hookAutocomplete('cfg-route-dest', 'dest');
+
   renderNavigation();
 }
 
@@ -475,20 +674,27 @@ window.atualizarDestino = function (lat, lng, nome) {
   const la = Number(lat);
   const ln = Number(lng);
   if (!Number.isFinite(la) || !Number.isFinite(ln)) return;
-  navState.waypoints = [{ lat: la, lng: ln, name: typeof nome === 'string' ? nome.trim() : '' }];
-  navState.dest = navState.waypoints[0];
+  navState.dest = { lat: la, lng: ln, name: typeof nome === 'string' ? nome.trim() : '' };
+  navState.pendingDest = null;
+  navState.steps = [];
+  navState.stepIndex = 0;
   navState.maneuver = null;
   navState.override = null;
   renderNavigation();
   updateNavLayout();
-  showToast('Navegação ativa — modo dividido', 'success', 1800);
+  fetchRouteToDest();
+  showToast('Destino recebido — traçando rota', 'success', 1800);
 };
 
 window.limparNavegacao = function () {
   const wasActive = !!(navState.dest || navState.maneuver);
   navState.dest = null;
-  navState.waypoints = [];
+  navState.pendingDest = null;
+  navState.steps = [];
+  navState.stepIndex = 0;
   navState.maneuver = null;
+  navState.routeBusy = false;
+  navState.routeError = false;
   navState.override = null;
   renderNavigation();
   updateNavLayout();
@@ -594,11 +800,6 @@ function processGPSReading(lat, lng, accuracyM, speedMS, timestamp) {
     const timeDeltaSec = (timestamp - lastGPSFix.at) / 1000;
     const distanceKm = haversineKm(lastGPSFix.lat, lastGPSFix.lng, lat, lng);
 
-    // Rumo de deslocamento (usa a própria trajetória p/ a seta bússola)
-    if (distanceKm > 0.00002) {
-      navState.course = bearingDeg(lastGPSFix.lat, lastGPSFix.lng, lat, lng);
-    }
-
     if (accuracyM <= GPS_CONFIG.minAccuracy && timeDeltaSec > 0) {
       state.gpsActive = true;
 
@@ -621,7 +822,7 @@ function processGPSReading(lat, lng, accuracyM, speedMS, timestamp) {
 
   lastGPSFix = { lat, lng, at: timestamp };
 
-  updateBearingNav(); // seta apontando pro destino (modo bússola)
+  updateTurnByTurn(); // instrução de manobra reativa ao GPS
 }
 
 // Ponte com o app nativo: leituras (lat, lng, acc, speed m/s, timestamp) já em km/h convertidas aqui

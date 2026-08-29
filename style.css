@@ -316,6 +316,44 @@ body.night-mode .clock-display {
   margin-top: 10px;
 }
 
+/* AUTOCOMPLETE DO CAMPO DE ENDEREÇO */
+.autocomplete {
+  position: relative;
+}
+.suggest-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  background: #0d0e10;
+  border: 1px solid #343a40;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  max-height: 190px;
+  overflow-y: auto;
+  z-index: 60;
+  display: none;
+}
+.suggest-list.open {
+  display: block;
+}
+.suggest-list li {
+  padding: 9px 12px;
+  font-size: 14px;
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.suggest-list li:active,
+.suggest-list li:hover {
+  background: #1f232b;
+}
+
 .color-pickers {
   display: flex;
   gap: 16px;
