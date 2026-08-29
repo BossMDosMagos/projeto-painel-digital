@@ -102,6 +102,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initConfigModalLogic();     // CONTROLES INTERNOS DO MODAL
   initOilControl();           // CONTROLE DE TROCA DE ÓLEO NO LCD
   initClock();
+  initNav();                  // NAVEGAÇÃO TURN-BY-TURN (módulo dividido)
   initGPS();
   requestWakeLock();
   if (!localStorage.getItem('selftest_done')) {
@@ -148,6 +149,220 @@ function updateGPSStatus(accuracyInMeters) {
     ledGroup.classList.add('gps-led-warn');
   }
 }
+
+/* ===== NAVEGAÇÃO TURN-BY-TURN (módulo dividido 50/50) =====
+   API pública, injetável pelo app nativo ou por uma API:
+   - window.atualizarNavegacao(distanciaM, tipoManobra, nomeRua)
+   - window.atualizarDestino(lat, lng, nome)
+   - window.limparNavegacao()
+   - window.alternarNavegacao()  (toggle manual)
+   Sem rota configurada, o painel opera em modo bússola: a seta aponta
+   o destino usando o rumo de deslocamento calculado do próprio GPS. */
+const navState = {
+  dest: null,        // { lat, lng, name }
+  maneuver: null,    // { dist, type, street }
+  course: null,      // último rumo de deslocamento (graus)
+  override: null     // força manual do split (true|false)
+};
+
+const MANEUVER_ROT = {
+  straight: 0, 'go-straight': 0, straight_mandatory: 0, 'go-straight-mandatory': 0,
+  left: -90, left_mandatory: -90, 'keep-left': -45, 'merge-left': -45,
+  right: 90, right_mandatory: 90, 'keep-right': 45, 'merge-right': 45,
+  'slight-left': -20, 'slight-left-mandatory': -20,
+  'slight-right': 20, 'slight-right-mandatory': 20,
+  uturn: 180, 'uturn-left': 180, 'uturn-right': 180
+};
+
+function bearingDeg(lat1, lng1, lat2, lng2) {
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const toDeg = (rad) => (rad * 180) / Math.PI;
+  const f1 = toRad(lat1);
+  const f2 = toRad(lat2);
+  const dL = toRad(lng2 - lng1);
+  const y = Math.sin(dL) * Math.cos(f2);
+  const x = Math.cos(f1) * Math.sin(f2) - Math.sin(f1) * Math.cos(f2) * Math.cos(dL);
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
+function formatDistLabel(meters) {
+  if (!Number.isFinite(meters) || meters < 0) return { v: '—', u: '' };
+  if (meters >= 1000) return { v: (meters / 1000).toFixed(1).replace('.', ','), u: 'km' };
+  return { v: String(Math.max(0, Math.round(meters))).padStart(3, '0'), u: 'm' };
+}
+
+function normalizeManeuver(type) {
+  if (typeof type !== 'string') return 'straight';
+  const t = type.toLowerCase();
+  if (t === 'arrive' || t === 'final' || t === 'finish' || t === 'depart') return 'arrive';
+  if (t.includes('roundabout') || t.includes('rotatoria') || t === 'round') return 'roundabout';
+  if (t in MANEUVER_ROT) return t;
+  if (t.includes('left')) return t.includes('slight') ? 'slight-left' : 'left';
+  if (t.includes('right')) return t.includes('slight') ? 'slight-right' : 'right';
+  if (t.includes('uturn') || t.includes('u-turn')) return 'uturn';
+  return 'straight';
+}
+
+function setManeuverIcon(type) {
+  const arrow = document.getElementById('nav-arrow');
+  const main = document.getElementById('nav-arrow-main');
+  const roundabout = document.getElementById('nav-arrow-roundabout');
+  const arrive = document.getElementById('nav-arrive');
+  if (!arrow || !main || !roundabout || !arrive) return;
+
+  arrow.classList.remove('idle');
+  main.style.display = 'none';
+  roundabout.style.display = 'none';
+  arrive.style.display = 'none';
+
+  if (type === 'roundabout') {
+    roundabout.style.display = '';
+  } else if (type === 'arrive') {
+    arrive.style.display = '';
+  } else {
+    main.style.display = '';
+    arrow.style.transform = `rotate(${MANEUVER_ROT[type] ?? 0}deg)`;
+  }
+}
+
+function renderDistance(meters) {
+  const val = document.getElementById('nav-dist-value');
+  const unit = document.getElementById('nav-dist-unit');
+  if (!val || !unit) return;
+  const f = formatDistLabel(meters);
+  val.textContent = f.v;
+  unit.textContent = f.u;
+}
+
+function idleNavigationPanel() {
+  const arrow = document.getElementById('nav-arrow');
+  const main = document.getElementById('nav-arrow-main');
+  const roundabout = document.getElementById('nav-arrow-roundabout');
+  const arrive = document.getElementById('nav-arrive');
+  if (arrow) {
+    arrow.classList.add('idle');
+    arrow.style.transform = 'rotate(0deg)';
+  }
+  if (main) main.style.display = 'none';
+  if (roundabout) roundabout.style.display = 'none';
+  if (arrive) arrive.style.display = 'none';
+  renderDistance(null);
+}
+
+function renderNavigation() {
+  const title = document.getElementById('nav-title');
+  const street = document.getElementById('nav-street');
+  if (!title || !street) return;
+
+  if (navState.maneuver) {
+    title.textContent = 'PRÓXIMA MANOBRA';
+    street.textContent = navState.maneuver.street || 'Siga a via';
+    renderDistance(navState.maneuver.dist);
+    setManeuverIcon(navState.maneuver.type);
+  } else if (navState.dest) {
+    title.textContent = (navState.dest.name || 'DESTINO').toUpperCase().slice(0, 22);
+    street.textContent = 'Em direção ao destino';
+    const arrow = document.getElementById('nav-arrow');
+    const main = document.getElementById('nav-arrow-main');
+    const roundabout = document.getElementById('nav-arrow-roundabout');
+    const arrive = document.getElementById('nav-arrive');
+    if (arrow) arrow.classList.remove('idle');
+    if (main) main.style.display = '';
+    if (roundabout) roundabout.style.display = 'none';
+    if (arrive) arrive.style.display = 'none';
+  } else {
+    title.textContent = 'DESTINO';
+    street.textContent = 'Sem rota ativa';
+    idleNavigationPanel();
+  }
+  updateNavToggleLabel();
+}
+
+function updateNavLayout() {
+  const rideActive = !!(navState.dest || navState.maneuver);
+  const on = navState.override !== null ? navState.override : rideActive;
+  document.body.classList.toggle('nav-split', on);
+  if (on) renderNavigation();
+  updateNavToggleLabel();
+}
+
+function updateNavToggleLabel() {
+  const btn = document.getElementById('btn-toggle-nav');
+  if (!btn) return;
+  const on = document.body.classList.contains('nav-split');
+  btn.textContent = on ? 'Só velocímetro' : 'Abrir modo dividido';
+}
+
+function updateBearingNav() {
+  if (!navState.dest || navState.maneuver || !lastGPSFix) return;
+
+  const dKm = haversineKm(lastGPSFix.lat, lastGPSFix.lng, navState.dest.lat, navState.dest.lng);
+  const brg = bearingDeg(lastGPSFix.lat, lastGPSFix.lng, navState.dest.lat, navState.dest.lng);
+  renderDistance(dKm * 1000);
+
+  const arrow = document.getElementById('nav-arrow');
+  if (!arrow) return;
+  let rel = 0;
+  if (typeof navState.course === 'number') {
+    rel = ((brg - navState.course) % 360 + 360) % 360;
+    if (rel > 180) rel -= 360;
+    else if (rel < -180) rel += 360;
+  }
+  arrow.style.transform = `rotate(${rel}deg)`;
+}
+
+function initNav() {
+  const btn = document.getElementById('btn-toggle-nav');
+  if (btn) btn.addEventListener('click', () => window.alternarNavegacao());
+  renderNavigation();
+}
+
+/* ---- API pública (injetável pelo app nativo) ---- */
+
+window.atualizarNavegacao = function (distanciaM, tipoManobra, nomeRua) {
+  const d = Number(distanciaM);
+  if (!Number.isFinite(d) || d < 0) {
+    navState.maneuver = null;
+  } else {
+    navState.maneuver = {
+      dist: d,
+      type: normalizeManeuver(tipoManobra),
+      street: typeof nomeRua === 'string' ? nomeRua.trim() : ''
+    };
+  }
+  navState.override = null; // volta ao automático
+  renderNavigation();
+  updateNavLayout();
+};
+
+window.atualizarDestino = function (lat, lng, nome) {
+  const la = Number(lat);
+  const ln = Number(lng);
+  if (!Number.isFinite(la) || !Number.isFinite(ln)) return;
+  navState.dest = { lat: la, lng: ln, name: typeof nome === 'string' ? nome.trim() : '' };
+  navState.maneuver = null;
+  navState.override = null;
+  renderNavigation();
+  updateNavLayout();
+  showToast('Navegação ativa — modo dividido', 'success', 1800);
+};
+
+window.limparNavegacao = function () {
+  const wasActive = !!(navState.dest || navState.maneuver);
+  navState.dest = null;
+  navState.maneuver = null;
+  navState.override = null;
+  renderNavigation();
+  updateNavLayout();
+  if (wasActive) showToast('Corrida finalizada', 'success', 1800);
+};
+
+window.alternarNavegacao = function () {
+  const on = document.body.classList.contains('nav-split');
+  navState.override = on ? false : true;
+  updateNavLayout();
+  showToast(on ? 'Modo dividido desativado' : 'Modo dividido ativado', 'success', 1800);
+};
 
 /* TOAST — feedback não-bloqueante, seguro com luva */
 function showToast(message, type = 'success', duration = 2200) {
@@ -241,6 +456,11 @@ function processGPSReading(lat, lng, accuracyM, speedMS, timestamp) {
     const timeDeltaSec = (timestamp - lastGPSFix.at) / 1000;
     const distanceKm = haversineKm(lastGPSFix.lat, lastGPSFix.lng, lat, lng);
 
+    // Rumo de deslocamento (usa a própria trajetória p/ a seta bússola)
+    if (distanceKm > 0.00002) {
+      navState.course = bearingDeg(lastGPSFix.lat, lastGPSFix.lng, lat, lng);
+    }
+
     if (accuracyM <= GPS_CONFIG.minAccuracy && timeDeltaSec > 0) {
       state.gpsActive = true;
 
@@ -262,6 +482,8 @@ function processGPSReading(lat, lng, accuracyM, speedMS, timestamp) {
   }
 
   lastGPSFix = { lat, lng, at: timestamp };
+
+  updateBearingNav(); // seta apontando pro destino (modo bússola)
 }
 
 // Ponte com o app nativo: leituras (lat, lng, acc, speed m/s, timestamp) já em km/h convertidas aqui

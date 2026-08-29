@@ -36,7 +36,32 @@ rastreio para — por isso os ajustes do HyperOS abaixo.
 1. Abra o **Painel Digital**.
 2. Conceda **Localização — "Sempre permitir"** (para funcionar em segundo plano)
    e **Notificações** (Android 13+).
-3. Toque em **Configurações** (segure fora do painel) e confira o GPS LED no topo (verde).
+3. Ative a **captura de navegação da 99**:
+   Configurações → Apps → **Acesso especial** → **Acesso a notificações** →
+   marque **Painel Digital**. (Sem isso o serviço que lê o endereço da 99 não roda.)
+4. Toque em **Configurações** (segure fora do painel) e confira o GPS LED no topo (verde).
+
+## Navegação 50/50 (automática)
+
+- Enquanto roda uma corrida da 99, o painel captura o endereço de destino,
+  geocodifica (Nominatim, grátis) e **ativa sozinho os modos**:
+  - **Bússola** (padrão): seta aponta o destino + distância em linha reta
+    (estilo Beeline) — não precisa de chave nenhuma.
+  - **Turn-by-turn**: preencha `Navigator.ORS_API_KEY` em `android-wrapper/.../Navigator.kt`
+    com a chave gratuita de **openrouteservice.org** (+2.000 consultas/dia). Aí o painel
+    passa a mostrar metros reais, seta de manobra e nome da rua.
+- Quando a corrida é finalizada, o painel **volta sozinho** para o velocímetro em tela cheia.
+- Botão manual em **Configurações** alterna o modo dividido quando você quiser.
+
+## Testar a captura da 99
+
+1. Ative o acesso às notificações (passo 3 acima).
+2. Peça uma corrida e **aceite-a** no celular.
+3. Abra o Logcat e filtre por `PainelDigital.99` — se o endereço aparecer
+   (`99 notificação -> ...`), está funcionando.
+4. Se **não** aparecer o endereço na notificação (varia por versão do app 99),
+   o plano B é um `AccessibilityService` lendo o texto da tela — o pipeline
+   (`Navigator`) já está pronto para receber essa fonte com pouca mudança.
 
 ## Ajustes obrigatórios no Redmi Note 13 Pro (HyperOS)
 

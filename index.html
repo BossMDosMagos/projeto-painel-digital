@@ -88,12 +88,19 @@
         <button id="btn-toggle-night" class="btn-action">Alternar Dia/Noite</button>
       </div>
 
+      <div class="config-group">
+        <label>Navegação Dividida (50/50):</label>
+        <button id="btn-toggle-nav" class="btn-action">Abrir modo dividido</button>
+      </div>
+
       <button id="btn-close-config" class="btn-close">Fechar</button>
     </div>
   </dialog>
 
   <!-- TOAST (feedback não-bloqueante) -->
   <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+  <main class="panel-row">
 
   <div class="gauge-container" id="gauge-card">
     <svg viewBox="0 0 400 400" class="gauge-svg">
@@ -246,6 +253,35 @@
       </div>
     </div>
   </div>
+
+  <!-- PAINEL DE NAVEGAÇÃO TURN-BY-TURN (lado direito no modo dividido 50/50) -->
+  <div class="nav-panel" id="nav-panel" aria-label="Navegação">
+    <div class="nav-header">
+      <span id="nav-title">DESTINO</span>
+    </div>
+
+    <div class="nav-arrow-box">
+      <svg class="nav-arrow" id="nav-arrow" viewBox="0 0 64 64" aria-hidden="true">
+        <path id="nav-arrow-main" d="M32 6 L50 54 L32 44 L14 54 Z"/>
+        <g id="nav-arrow-roundabout" style="display:none">
+          <path d="M32 32 m-18 0 a18 18 0 1 1 36 0 a18 18 0 1 1 -36 0" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+          <path d="M32 14 L40 30 L32 26 L24 30 Z"/>
+        </g>
+        <g id="nav-arrive" style="display:none">
+          <path d="M18 52 L22 28 L46 28 L50 52 Z"/>
+          <rect x="28" y="6" width="8" height="16" rx="2"/>
+        </g>
+      </svg>
+    </div>
+
+    <div class="nav-distance">
+      <span id="nav-dist-value">—</span><span class="nav-dist-unit" id="nav-dist-unit"></span>
+    </div>
+
+    <div class="nav-street" id="nav-street">Sem rota ativa</div>
+  </div>
+
+  </main>
 
   <script src="main.js"></script>
   
